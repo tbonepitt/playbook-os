@@ -29,6 +29,8 @@ export async function GET(req: NextRequest) {
   const playbookId = req.nextUrl.searchParams.get('playbookId')
   if (!playbookId) return NextResponse.json({ error: 'Missing playbookId' }, { status: 400 })
 
+  if (!process.env.DATABASE_URL) return NextResponse.json(initialState(playbookId))
+
   const run = await prisma.pipelineRun.findFirst({ where: { playbookId }, orderBy: { createdAt: 'desc' } })
   return NextResponse.json(run ? run.stages : initialState(playbookId))
 }
@@ -39,6 +41,13 @@ export async function POST(req: NextRequest) {
 
   const playbook = await repo.playbooks.get(playbookId)
   if (!playbook) return NextResponse.json({ error: 'Playbook not found' }, { status: 404 })
+
+  if (!process.env.DATABASE_URL) {
+    return NextResponse.json(
+      { error: 'DATABASE_URL is not configured yet. Add a Postgres database before running generation.' },
+      { status: 503 },
+    )
+  }
 
   const state = initialState(playbookId)
   const run = await prisma.pipelineRun.create({ data: { id: makeId('run'), playbookId, stages: state, status: 'running' } })

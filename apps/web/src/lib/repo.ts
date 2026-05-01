@@ -1,6 +1,10 @@
 import type { Prisma } from '@prisma/client'
 import type { Artifact, Framework, Module, Playbook, Source } from '@playbook-os/core'
 import { prisma } from './prisma'
+import { db as stubDb } from './stub-db'
+
+const hasDatabase = Boolean(process.env.DATABASE_URL)
+const fallbackFrameworks = new Map<string, Framework>()
 
 function makeId(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`
@@ -97,14 +101,17 @@ function toPlaybook(row: {
 export const repo = {
   playbooks: {
     async list(): Promise<Playbook[]> {
+      if (!hasDatabase) return stubDb.playbooks.list()
       const rows = await prisma.playbook.findMany({ orderBy: { updatedAt: 'desc' }, include: { sources: true } })
       return rows.map(toPlaybook)
     },
     async get(id: string): Promise<Playbook | undefined> {
+      if (!hasDatabase) return stubDb.playbooks.get(id)
       const row = await prisma.playbook.findUnique({ where: { id }, include: { sources: true } })
       return row ? toPlaybook(row) : undefined
     },
     async create(data: Pick<Playbook, 'title' | 'audience' | 'goal' | 'tone' | 'outputTypes'>): Promise<Playbook> {
+      if (!hasDatabase) return stubDb.playbooks.create({ ...data, sourceIds: [], status: 'draft' })
       const row = await prisma.playbook.create({
         data: {
           id: makeId('pb'),
@@ -122,6 +129,7 @@ export const repo = {
       return toPlaybook(row)
     },
     async update(id: string, patch: Partial<Playbook>): Promise<Playbook | undefined> {
+      if (!hasDatabase) return stubDb.playbooks.update(id, patch)
       const row = await prisma.playbook.update({
         where: { id },
         data: {
@@ -141,6 +149,13 @@ export const repo = {
       return row ? toPlaybook(row) : undefined
     },
     async attachSource(playbookId: string, sourceId: string) {
+      if (!hasDatabase) {
+        const playbook = stubDb.playbooks.get(playbookId)
+        if (playbook && !playbook.sourceIds.includes(sourceId)) {
+          stubDb.playbooks.update(playbookId, { sourceIds: [...playbook.sourceIds, sourceId] })
+        }
+        return
+      }
       await prisma.playbookSource.upsert({
         where: { playbookId_sourceId: { playbookId, sourceId } },
         update: {},
@@ -148,20 +163,27 @@ export const repo = {
       })
     },
     async sources(playbookId: string): Promise<Source[]> {
+      if (!hasDatabase) {
+        const playbook = stubDb.playbooks.get(playbookId)
+        return playbook?.sourceIds.map((id) => stubDb.sources.get(id)).filter((s): s is Source => Boolean(s)) ?? []
+      }
       const rows = await prisma.playbookSource.findMany({ where: { playbookId }, include: { source: true }, orderBy: { createdAt: 'desc' } })
       return rows.map((r) => toSource(r.source))
     },
   },
   sources: {
     async list(): Promise<Source[]> {
+      if (!hasDatabase) return stubDb.sources.list()
       const rows = await prisma.source.findMany({ orderBy: { createdAt: 'desc' } })
       return rows.map(toSource)
     },
     async get(id: string): Promise<Source | undefined> {
+      if (!hasDatabase) return stubDb.sources.get(id)
       const row = await prisma.source.findUnique({ where: { id } })
       return row ? toSource(row) : undefined
     },
     async create(data: Omit<Source, 'id' | 'createdAt' | 'updatedAt'>): Promise<Source> {
+      if (!hasDatabase) return stubDb.sources.create(data)
       const row = await prisma.source.create({
         data: {
           id: makeId('src'),
@@ -177,6 +199,7 @@ export const repo = {
       return toSource(row)
     },
     async update(id: string, patch: Partial<Source>): Promise<Source | undefined> {
+      if (!hasDatabase) return stubDb.sources.update(id, patch)
       const row = await prisma.source.update({
         where: { id },
         data: {
@@ -194,10 +217,16 @@ export const repo = {
   },
   frameworks: {
     async get(playbookId: string): Promise<Framework | undefined> {
+      if (!hasDatabase) return fallbackFrameworks.get(playbookId)
       const row = await prisma.framework.findUnique({ where: { playbookId } })
       return row ? toFramework(row) : undefined
     },
     async upsert(framework: Framework): Promise<Framework> {
+      if (!hasDatabase) {
+        fallbackFrameworks.set(framework.playbookId, framework)
+        stubDb.playbooks.update(framework.playbookId, { frameworkId: framework.id })
+        return framework
+      }
       const row = await prisma.framework.upsert({
         where: { playbookId: framework.playbookId },
         update: { name: framework.name, pillars: framework.pillars as unknown as Prisma.InputJsonValue, alternateNames: framework.alternateNames },
