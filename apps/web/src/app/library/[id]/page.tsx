@@ -1,14 +1,18 @@
 import { notFound } from 'next/navigation'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { db } from '@/lib/stub-db'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { USER_PLAYBOOKS_COOKIE, decodeUserPlaybooks } from '@/lib/user-playbook-cookie'
 
 export default async function PlaybookDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const playbook = db.playbooks.get(id)
+  const cookieStore = await cookies()
+  const userPlaybooks = decodeUserPlaybooks(cookieStore.get(USER_PLAYBOOKS_COOKIE)?.value)
+  const playbook = userPlaybooks.find((p) => p.id === id) ?? db.playbooks.get(id)
   if (!playbook) notFound()
 
   const sources = playbook.sourceIds

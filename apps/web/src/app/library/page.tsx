@@ -1,9 +1,11 @@
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import { db } from '@/lib/stub-db'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import type { Playbook } from '@playbook-os/core'
+import { USER_PLAYBOOKS_COOKIE, decodeUserPlaybooks } from '@/lib/user-playbook-cookie'
 
 function SourceChips({ count }: { count: number }) {
   if (!count) return <span className="text-gray-400 text-xs">No sources</span>
@@ -61,8 +63,10 @@ function PlaybookRow({ playbook }: { playbook: Playbook }) {
   )
 }
 
-export default function LibraryPage() {
-  const playbooks = db.playbooks.list()
+export default async function LibraryPage() {
+  const cookieStore = await cookies()
+  const userPlaybooks = decodeUserPlaybooks(cookieStore.get(USER_PLAYBOOKS_COOKIE)?.value)
+  const playbooks = [...userPlaybooks, ...db.playbooks.list().filter((p) => !userPlaybooks.some((up) => up.id === p.id))]
 
   return (
     <div>
