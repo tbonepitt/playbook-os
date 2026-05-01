@@ -4,8 +4,9 @@ import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 
-export default function SourceDetailPage({ params }: { params: { id: string } }) {
-  const source = db.sources.get(params.id)
+export default async function SourceDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const source = db.sources.get(id)
   if (!source) notFound()
 
   return (

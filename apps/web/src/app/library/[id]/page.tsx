@@ -6,8 +6,9 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 
-export default function PlaybookDetailPage({ params }: { params: { id: string } }) {
-  const playbook = db.playbooks.get(params.id)
+export default async function PlaybookDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const playbook = db.playbooks.get(id)
   if (!playbook) notFound()
 
   const sources = playbook.sourceIds

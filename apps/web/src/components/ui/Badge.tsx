@@ -1,4 +1,4 @@
-type BadgeVariant = 'draft' | 'reviewing' | 'published' | 'ready' | 'error' | 'pending' | 'extracted'
+type BadgeVariant = 'draft' | 'reviewing' | 'published' | 'ready' | 'error' | 'pending' | 'validated' | 'extracted'
 
 const styles: Record<BadgeVariant, string> = {
   draft: 'bg-gray-100 text-gray-600',
@@ -7,6 +7,7 @@ const styles: Record<BadgeVariant, string> = {
   ready: 'bg-green-50 text-green-700 border border-green-200',
   error: 'bg-red-50 text-red-700 border border-red-200',
   pending: 'bg-gray-100 text-gray-500',
+  validated: 'bg-green-50 text-green-700 border border-green-200',
   extracted: 'bg-blue-50 text-blue-700 border border-blue-200',
 }
 

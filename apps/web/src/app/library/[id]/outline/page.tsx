@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 
-export default function OutlinePage({ params }: { params: { id: string } }) {
-  const playbook = db.playbooks.get(params.id)
+export default async function OutlinePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const playbook = db.playbooks.get(id)
   if (!playbook) notFound()
 
   const totalMinutes = playbook.modules.reduce((sum, m) => sum + m.estimatedMinutes, 0)
@@ -19,7 +20,7 @@ export default function OutlinePage({ params }: { params: { id: string } }) {
         title="Course Outline"
         subtitle={`${playbook.modules.length} modules · ${totalLessons} lessons · ${totalMinutes} min`}
         action={
-          <Link href={`/library/${params.id}`}>
+          <Link href={`/library/${id}`}>
             <Button variant="secondary" size="sm">← Back to playbook</Button>
           </Link>
         }
@@ -29,7 +30,7 @@ export default function OutlinePage({ params }: { params: { id: string } }) {
         {playbook.modules.length === 0 ? (
           <Card className="p-8 text-center">
             <p className="text-sm text-gray-500 mb-3">No modules yet.</p>
-            <Link href={`/library/${params.id}/analysis`}>
+            <Link href={`/library/${id}/analysis`}>
               <Button>Run pipeline →</Button>
             </Link>
           </Card>
@@ -61,7 +62,7 @@ export default function OutlinePage({ params }: { params: { id: string } }) {
                     </td>
                     <td className="px-6 py-4">
                       <Link
-                        href={`/library/${params.id}/outline/${mod.id}`}
+                        href={`/library/${id}/outline/${mod.id}`}
                         className="text-xs text-gray-400 hover:text-gray-900 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         Open →

@@ -21,20 +21,19 @@ export async function POST(req: NextRequest) {
 
 async function runPipeline(playbookId: string) {
   const { extractConcepts, generateFramework, generateOutline } = await import('@playbook-os/generators')
-  const { UrlAdapter } = await import('@playbook-os/pipeline')
+  const { urlAdapter } = await import('@playbook-os/pipeline')
 
   const playbook = db.playbooks.get(playbookId)!
   const sources = playbook.sourceIds.map((id) => db.sources.get(id)).filter(Boolean)
 
   updateStage(playbookId, 'ingest', 'running')
-  const adapter = new UrlAdapter()
   let combinedText = ''
 
   for (const src of sources) {
     if (!src) continue
     try {
       if (src.type === 'article' || src.type === 'markdown') {
-        const raw = await adapter.fetch(src)
+        const raw = await urlAdapter.fetch(src)
         combinedText += `\n\n## ${src.name}\n\n${raw.text}`
         db.sources.update(src.id, { status: 'extracted', rawText: raw.text })
       }
