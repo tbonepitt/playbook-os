@@ -1,0 +1,5 @@
+export type { SourceAdapter, ValidationResult, RawSource } from './adapters/types'
+export { urlAdapter } from './adapters/url'
+export { pdfAdapter } from './adapters/pdf'
+export { githubAdapter } from './adapters/github'
+export { youtubeAdapter } from './adapters/youtube'
