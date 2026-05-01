@@ -1,23 +1,19 @@
 import { notFound } from 'next/navigation'
-import { cookies } from 'next/headers'
 import Link from 'next/link'
-import { db } from '@/lib/stub-db'
+import { repo } from '@/lib/repo'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { USER_PLAYBOOKS_COOKIE, decodeUserPlaybooks } from '@/lib/user-playbook-cookie'
+
+export const dynamic = 'force-dynamic'
 
 export default async function PlaybookDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const cookieStore = await cookies()
-  const userPlaybooks = decodeUserPlaybooks(cookieStore.get(USER_PLAYBOOKS_COOKIE)?.value)
-  const playbook = userPlaybooks.find((p) => p.id === id) ?? db.playbooks.get(id)
+  const playbook = await repo.playbooks.get(id)
   if (!playbook) notFound()
 
-  const sources = playbook.sourceIds
-    .map((id) => db.sources.get(id))
-    .filter(Boolean)
+  const sources = await repo.playbooks.sources(id)
 
   return (
     <div>
@@ -90,7 +86,7 @@ export default async function PlaybookDetailPage({ params }: { params: Promise<{
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Sources</h2>
-              <Link href="/sources">
+              <Link href={`/sources/new?playbookId=${id}`}>
                 <Button size="sm" variant="ghost">+ Add</Button>
               </Link>
             </div>

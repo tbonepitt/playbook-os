@@ -1,13 +1,15 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { db } from '@/lib/stub-db'
+import { repo } from '@/lib/repo'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 
+export const dynamic = 'force-dynamic'
+
 export default async function ModuleDetailPage({ params }: { params: Promise<{ id: string; moduleId: string }> }) {
   const { id, moduleId } = await params
-  const playbook = db.playbooks.get(id)
+  const playbook = await repo.playbooks.get(id)
   if (!playbook) notFound()
 
   const mod = playbook.modules.find((m) => m.id === moduleId)

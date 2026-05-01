@@ -1,12 +1,14 @@
 import { notFound } from 'next/navigation'
-import { db } from '@/lib/stub-db'
+import { repo } from '@/lib/repo'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 
+export const dynamic = 'force-dynamic'
+
 export default async function SourceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const source = db.sources.get(id)
+  const source = await repo.sources.get(id)
   if (!source) notFound()
 
   return (

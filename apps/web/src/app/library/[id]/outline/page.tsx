@@ -1,14 +1,16 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { db } from '@/lib/stub-db'
+import { repo } from '@/lib/repo'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 
+export const dynamic = 'force-dynamic'
+
 export default async function OutlinePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const playbook = db.playbooks.get(id)
+  const playbook = await repo.playbooks.get(id)
   if (!playbook) notFound()
 
   const totalMinutes = playbook.modules.reduce((sum, m) => sum + m.estimatedMinutes, 0)

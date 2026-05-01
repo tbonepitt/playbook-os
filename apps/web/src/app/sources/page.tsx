@@ -1,10 +1,12 @@
 import Link from 'next/link'
-import { db } from '@/lib/stub-db'
+import { repo } from '@/lib/repo'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import type { Source } from '@playbook-os/core'
+
+export const dynamic = 'force-dynamic'
 
 const TYPE_LABEL: Record<Source['type'], string> = {
   pdf: 'PDF',
@@ -17,8 +19,8 @@ const TYPE_LABEL: Record<Source['type'], string> = {
   notion: 'NT',
 }
 
-export default function SourcesPage() {
-  const sources = db.sources.list()
+export default async function SourcesPage() {
+  const sources = await repo.sources.list()
 
   return (
     <div>

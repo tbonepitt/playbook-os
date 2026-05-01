@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Playbook {
+  id            String           @id
+  title         String
+  audience      String           @default("")
+  goal          String           @default("")
+  tone          String           @default("Practical")
+  outputTypes   Json
+  status        String           @default("draft")
+  frameworkId   String?
+  modules       Json             @default("[]")
+  artifacts     Json             @default("[]")
+  publishConfig Json?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  sources       PlaybookSource[]
+  framework     Framework?
+  pipelineRuns  PipelineRun[]
+
+  @@index([updatedAt])
+}
+
+model Source {
+  id          String           @id
+  type        String
+  url         String           @default("")
+  name        String
+  size        String?
+  status      String           @default("pending")
+  rawText     String?
+  extracted   Json?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  playbooks   PlaybookSource[]
+
+  @@index([createdAt])
+}
+
+model PlaybookSource {
+  playbookId String
+  sourceId   String
+  createdAt  DateTime @default(now())
+  playbook   Playbook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+  source     Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@id([playbookId, sourceId])
+}
+
+model Framework {
+  id             String   @id
+  playbookId     String   @unique
+  name           String
+  pillars        Json
+  alternateNames Json     @default("[]")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  playbook       Playbook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+}
+
+model PipelineRun {
+  id         String   @id
+  playbookId String
+  status     String   @default("running")
+  stages     Json
+  error      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  playbook   Playbook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+
+  @@index([playbookId, createdAt])
+}

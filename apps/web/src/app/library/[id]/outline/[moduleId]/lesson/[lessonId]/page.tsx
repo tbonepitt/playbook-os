@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
-import { db } from '@/lib/stub-db'
+import { repo } from '@/lib/repo'
 import { LessonPlayer } from '@/components/domain/LessonPlayer'
+
+export const dynamic = 'force-dynamic'
 
 export default async function LessonPage({
   params,
@@ -8,7 +10,7 @@ export default async function LessonPage({
   params: Promise<{ id: string; moduleId: string; lessonId: string }>
 }) {
   const { id, moduleId, lessonId } = await params
-  const playbook = db.playbooks.get(id)
+  const playbook = await repo.playbooks.get(id)
   if (!playbook) notFound()
 
   const mod = playbook.modules.find((m) => m.id === moduleId)
