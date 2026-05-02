@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Button } from '@/components/ui/Button'
@@ -10,24 +10,31 @@ import { STAGE_LABELS } from '@/lib/pipeline-state'
 
 const STAGE_ORDER: PipelineStage[] = ['ingest', 'extract', 'cluster', 'framework', 'outline', 'lessons']
 
+function formatTime(value: unknown): string {
+  if (!value) return ''
+  try {
+    return new Date(value as string).toLocaleTimeString()
+  } catch {
+    return ''
+  }
+}
+
 function StageRow({ stage, state }: { stage: PipelineStage; state: PipelineState['stages'][PipelineStage] }) {
   const icons = {
     waiting: <span className="text-gray-300">○</span>,
-    running: <span className="animate-spin text-blue-500">◌</span>,
+    running: <span className="animate-spin inline-block text-blue-500">◌</span>,
     done: <span className="text-green-600">✓</span>,
     error: <span className="text-red-500">✕</span>,
   }
 
   return (
-    <div className={`flex items-center gap-4 py-3 border-b border-gray-50 last:border-0`}>
+    <div className="flex items-center gap-4 py-3 border-b border-gray-50 last:border-0">
       <span className="text-lg w-6 text-center">{icons[state.status]}</span>
       <span className={`text-sm flex-1 ${state.status === 'waiting' ? 'text-gray-400' : 'text-gray-900'}`}>
         {STAGE_LABELS[stage]}
       </span>
       {state.status === 'done' && state.completedAt && (
-        <span className="text-xs text-gray-400">
-          {state.completedAt.toLocaleTimeString()}
-        </span>
+        <span className="text-xs text-gray-400">{formatTime(state.completedAt)}</span>
       )}
       {state.status === 'running' && (
         <span className="text-xs text-blue-500 animate-pulse">Running…</span>
@@ -44,21 +51,31 @@ export default function AnalysisPage() {
   const router = useRouter()
   const [pipelineState, setPipelineState] = useState<PipelineState | null>(null)
   const [running, setRunning] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const runningRef = useRef(false)
 
-  const fetchState = useCallback(async () => {
+  const fetchState = useCallback(async (): Promise<PipelineState | null> => {
     const res = await fetch(`/api/pipeline?playbookId=${id}`)
-    if (res.ok) setPipelineState(await res.json())
+    if (!res.ok) return null
+    const data = await res.json()
+    setPipelineState(data)
+    return data
   }, [id])
 
   useEffect(() => {
     fetchState()
   }, [fetchState])
 
+  // Poll while running — use ref to avoid stale closure
+  useEffect(() => {
+    runningRef.current = running
+  }, [running])
+
   useEffect(() => {
     if (!running) return
     const interval = setInterval(async () => {
-      await fetchState()
-      const state = pipelineState
+      if (!runningRef.current) return clearInterval(interval)
+      const state = await fetchState()
       if (!state) return
       const allDone = STAGE_ORDER.every((s) => ['done', 'error'].includes(state.stages[s].status))
       if (allDone) {
@@ -67,19 +84,26 @@ export default function AnalysisPage() {
       }
     }, 1500)
     return () => clearInterval(interval)
-  }, [running, fetchState, pipelineState])
+  }, [running, fetchState])
 
   async function startPipeline() {
     setRunning(true)
-    await fetch('/api/pipeline', {
+    setError(null)
+    const res = await fetch('/api/pipeline', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ playbookId: id }),
     })
+    const data = await res.json()
+    if (!res.ok) {
+      setError(data.error ?? 'Pipeline failed')
+      setRunning(false)
+    }
     fetchState()
   }
 
-  const outlineDone = pipelineState?.stages.outline.status === 'done'
+  const allDone = pipelineState && STAGE_ORDER.every((s) => pipelineState.stages[s].status === 'done')
+  const hasError = pipelineState && STAGE_ORDER.some((s) => pipelineState.stages[s].status === 'error')
 
   return (
     <div>
@@ -93,17 +117,26 @@ export default function AnalysisPage() {
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Pipeline stages</h2>
-              {!running && !outlineDone && (
-                <Button size="sm" onClick={startPipeline}>
-                  Run pipeline
-                </Button>
-              )}
-              {outlineDone && (
-                <Button size="sm" onClick={() => router.push(`/library/${id}/framework`)}>
-                  View framework →
-                </Button>
-              )}
+              <div className="flex gap-2">
+                {!running && !allDone && (
+                  <Button size="sm" onClick={startPipeline}>
+                    {hasError ? 'Retry pipeline' : 'Run pipeline'}
+                  </Button>
+                )}
+                {allDone && (
+                  <Button size="sm" onClick={() => router.push(`/library/${id}/framework`)}>
+                    View framework →
+                  </Button>
+                )}
+              </div>
             </div>
+
+            {error && (
+              <div className="mb-4 rounded-lg bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
             {pipelineState ? (
               <div>
                 {STAGE_ORDER.map((stage) => (
@@ -134,6 +167,13 @@ export default function AnalysisPage() {
                 </li>
               ))}
             </ol>
+          </Card>
+
+          <Card className="p-6">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Before you run</h2>
+            <p className="text-xs text-gray-500">
+              Make sure you've added at least one source to this playbook. URL/article, GitHub, and raw text sources work best.
+            </p>
           </Card>
         </div>
       </div>

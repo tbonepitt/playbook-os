@@ -66,6 +66,7 @@ function toFramework(row: {
 
 function toPlaybook(row: {
   id: string
+  userId?: string
   title: string
   audience: string
   goal: string
@@ -100,9 +101,10 @@ function toPlaybook(row: {
 
 export const repo = {
   playbooks: {
-    async list(): Promise<Playbook[]> {
+    async list(userId?: string): Promise<Playbook[]> {
       if (!hasDatabase) return stubDb.playbooks.list()
-      const rows = await prisma.playbook.findMany({ orderBy: { updatedAt: 'desc' }, include: { sources: true } })
+      const where = userId ? { userId } : {}
+      const rows = await prisma.playbook.findMany({ where, orderBy: { updatedAt: 'desc' }, include: { sources: true } })
       return rows.map(toPlaybook)
     },
     async get(id: string): Promise<Playbook | undefined> {
@@ -110,11 +112,12 @@ export const repo = {
       const row = await prisma.playbook.findUnique({ where: { id }, include: { sources: true } })
       return row ? toPlaybook(row) : undefined
     },
-    async create(data: Pick<Playbook, 'title' | 'audience' | 'goal' | 'tone' | 'outputTypes'>): Promise<Playbook> {
+    async create(data: Pick<Playbook, 'title' | 'audience' | 'goal' | 'tone' | 'outputTypes'> & { userId?: string }): Promise<Playbook> {
       if (!hasDatabase) return stubDb.playbooks.create({ ...data, sourceIds: [], status: 'draft' })
       const row = await prisma.playbook.create({
         data: {
           id: makeId('pb'),
+          userId: data.userId ?? '',
           title: data.title,
           audience: data.audience,
           goal: data.goal,

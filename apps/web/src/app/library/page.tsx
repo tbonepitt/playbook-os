@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
+import { auth } from '@clerk/nextjs/server'
 import { repo } from '@/lib/repo'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Button } from '@/components/ui/Button'
@@ -66,7 +67,8 @@ function PlaybookRow({ playbook }: { playbook: Playbook }) {
 }
 
 async function LibraryTable() {
-  const playbooks = await repo.playbooks.list()
+  const { userId } = await auth().catch(() => ({ userId: undefined })) as { userId?: string | null }
+  const playbooks = await repo.playbooks.list(userId ?? undefined)
 
   if (playbooks.length === 0) {
     return <EmptyState />

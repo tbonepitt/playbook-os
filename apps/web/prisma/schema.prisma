@@ -10,6 +10,7 @@ datasource db {
 
 model Playbook {
   id            String           @id
+  userId        String           @default("")
   title         String
   audience      String           @default("")
   goal          String           @default("")
@@ -26,6 +27,7 @@ model Playbook {
   framework     Framework?
   pipelineRuns  PipelineRun[]
 
+  @@index([userId, updatedAt])
   @@index([updatedAt])
 }
 
