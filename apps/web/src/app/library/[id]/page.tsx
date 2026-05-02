@@ -1,18 +1,19 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { db } from '@/lib/stub-db'
+import { repo } from '@/lib/repo'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 
-export default function PlaybookDetailPage({ params }: { params: { id: string } }) {
-  const playbook = db.playbooks.get(params.id)
+export const dynamic = 'force-dynamic'
+
+export default async function PlaybookDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const playbook = await repo.playbooks.get(id)
   if (!playbook) notFound()
 
-  const sources = playbook.sourceIds
-    .map((id) => db.sources.get(id))
-    .filter(Boolean)
+  const sources = await repo.playbooks.sources(id)
 
   return (
     <div>
@@ -85,7 +86,7 @@ export default function PlaybookDetailPage({ params }: { params: { id: string } 
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Sources</h2>
-              <Link href="/sources">
+              <Link href={`/sources/new?playbookId=${id}`}>
                 <Button size="sm" variant="ghost">+ Add</Button>
               </Link>
             </div>

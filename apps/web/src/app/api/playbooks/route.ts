@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/stub-db'
 import { CreatePlaybookSchema } from '@playbook-os/core'
+import { repo } from '@/lib/repo'
 
 export async function GET() {
-  return NextResponse.json(db.playbooks.list())
+  return NextResponse.json(await repo.playbooks.list())
 }
 
 export async function POST(req: NextRequest) {
@@ -11,6 +11,6 @@ export async function POST(req: NextRequest) {
   const parsed = CreatePlaybookSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  const playbook = db.playbooks.create({ ...parsed.data, sourceIds: [], status: 'draft' })
+  const playbook = await repo.playbooks.create(parsed.data)
   return NextResponse.json(playbook, { status: 201 })
 }

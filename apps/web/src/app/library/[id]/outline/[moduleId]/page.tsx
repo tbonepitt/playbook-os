@@ -1,15 +1,18 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { db } from '@/lib/stub-db'
+import { repo } from '@/lib/repo'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 
-export default function ModuleDetailPage({ params }: { params: { id: string; moduleId: string } }) {
-  const playbook = db.playbooks.get(params.id)
+export const dynamic = 'force-dynamic'
+
+export default async function ModuleDetailPage({ params }: { params: Promise<{ id: string; moduleId: string }> }) {
+  const { id, moduleId } = await params
+  const playbook = await repo.playbooks.get(id)
   if (!playbook) notFound()
 
-  const mod = playbook.modules.find((m) => m.id === params.moduleId)
+  const mod = playbook.modules.find((m) => m.id === moduleId)
   if (!mod) notFound()
 
   return (
@@ -19,7 +22,7 @@ export default function ModuleDetailPage({ params }: { params: { id: string; mod
         subtitle={`${mod.estimatedMinutes} min · ${mod.lessons.length} lessons`}
         action={
           <Link
-            href={`/library/${params.id}/outline`}
+            href={`/library/${id}/outline`}
             className="text-sm text-gray-500 hover:text-gray-900"
           >
             ← Outline
@@ -54,7 +57,7 @@ export default function ModuleDetailPage({ params }: { params: { id: string; mod
                     <div className="flex items-center gap-3">
                       <Badge status={lesson.status} />
                       <Link
-                        href={`/library/${params.id}/outline/${params.moduleId}/lesson/${lesson.id}`}
+                        href={`/library/${id}/outline/${moduleId}/lesson/${lesson.id}`}
                         className="text-xs text-gray-400 hover:text-gray-900 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         Play →

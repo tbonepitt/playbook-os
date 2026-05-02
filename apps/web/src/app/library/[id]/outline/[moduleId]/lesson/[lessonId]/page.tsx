@@ -1,25 +1,28 @@
 import { notFound } from 'next/navigation'
-import { db } from '@/lib/stub-db'
+import { repo } from '@/lib/repo'
 import { LessonPlayer } from '@/components/domain/LessonPlayer'
 
-export default function LessonPage({
+export const dynamic = 'force-dynamic'
+
+export default async function LessonPage({
   params,
 }: {
-  params: { id: string; moduleId: string; lessonId: string }
+  params: Promise<{ id: string; moduleId: string; lessonId: string }>
 }) {
-  const playbook = db.playbooks.get(params.id)
+  const { id, moduleId, lessonId } = await params
+  const playbook = await repo.playbooks.get(id)
   if (!playbook) notFound()
 
-  const mod = playbook.modules.find((m) => m.id === params.moduleId)
+  const mod = playbook.modules.find((m) => m.id === moduleId)
   if (!mod) notFound()
 
-  const lesson = mod.lessons.find((l) => l.id === params.lessonId)
+  const lesson = mod.lessons.find((l) => l.id === lessonId)
   if (!lesson) notFound()
 
   return (
     <LessonPlayer
       lesson={lesson}
-      backHref={`/library/${params.id}/outline/${params.moduleId}`}
+      backHref={`/library/${id}/outline/${moduleId}`}
     />
   )
 }

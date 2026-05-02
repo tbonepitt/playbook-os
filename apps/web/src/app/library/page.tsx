@@ -1,26 +1,19 @@
-'use client'
-
-import { useState } from 'react'
+import { Suspense } from 'react'
 import Link from 'next/link'
-import { db } from '@/lib/stub-db'
+import { repo } from '@/lib/repo'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import type { Playbook } from '@playbook-os/core'
 
-const STATUS_FILTERS = ['All', 'draft', 'reviewing', 'published'] as const
-type Filter = (typeof STATUS_FILTERS)[number]
+export const dynamic = 'force-dynamic'
 
-function SourceChips({ sources }: { sources: string[] }) {
-  if (!sources.length) return <span className="text-gray-300 text-xs">—</span>
+function SourceChips({ count }: { count: number }) {
+  if (!count) return <span className="text-gray-300 text-xs">—</span>
   return (
-    <div className="flex flex-wrap gap-1">
-      {sources.map((s) => (
-        <span key={s} className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[11px] rounded font-medium">
-          {s}
-        </span>
-      ))}
-    </div>
+    <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[11px] rounded font-medium">
+      {count} source{count !== 1 ? 's' : ''}
+    </span>
   )
 }
 
@@ -31,23 +24,16 @@ function PlaybookRow({ playbook }: { playbook: Playbook }) {
       )
     : 0
 
-  const sourceTypes = playbook.sourceIds
-    .map((id) => db.sources.get(id)?.type.slice(0, 2).toUpperCase() ?? null)
-    .filter(Boolean) as string[]
-
   return (
     <tr className="group hover:bg-gray-50 transition-colors">
       <td className="px-6 py-3.5">
-        <Link
-          href={`/library/${playbook.id}`}
-          className="font-medium text-gray-900 hover:underline text-sm"
-        >
+        <Link href={`/library/${playbook.id}`} className="font-medium text-gray-900 hover:underline text-sm">
           {playbook.title}
         </Link>
         <p className="text-xs text-gray-400 mt-0.5">{playbook.audience}</p>
       </td>
       <td className="px-6 py-3.5">
-        <SourceChips sources={sourceTypes} />
+        <SourceChips count={playbook.sourceIds.length} />
       </td>
       <td className="px-6 py-3.5">
         <Badge status={playbook.status} />
@@ -79,24 +65,38 @@ function PlaybookRow({ playbook }: { playbook: Playbook }) {
   )
 }
 
-export default function LibraryPage() {
-  const allPlaybooks = db.playbooks.list()
-  const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState<Filter>('All')
+async function LibraryTable() {
+  const playbooks = await repo.playbooks.list()
 
-  const filtered = allPlaybooks.filter((p) => {
-    const matchesStatus = filter === 'All' || p.status === filter
-    const matchesSearch =
-      !search ||
-      p.title.toLowerCase().includes(search.toLowerCase()) ||
-      p.audience.toLowerCase().includes(search.toLowerCase())
-    return matchesStatus && matchesSearch
-  })
-
-  if (allPlaybooks.length === 0) {
+  if (playbooks.length === 0) {
     return <EmptyState />
   }
 
+  return (
+    <div>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-100">
+              {['Playbook', 'Sources', 'Status', 'Modules', 'Lessons', 'Progress', 'Updated', ''].map((h) => (
+                <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {playbooks.map((p) => (
+              <PlaybookRow key={p.id} playbook={p} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+export default function LibraryPage() {
   return (
     <div>
       <ScreenHeader
@@ -108,62 +108,16 @@ export default function LibraryPage() {
           </Link>
         }
       />
-
       <div className="mx-8 pb-12">
-        {/* Search + filters */}
-        <div className="flex items-center gap-3 mb-4">
-          <input
-            type="text"
-            placeholder="Search playbooks…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="block w-60 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm placeholder:text-gray-400 focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
-          />
-          <div className="flex gap-1.5">
-            {STATUS_FILTERS.map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors capitalize ${
-                  filter === f
-                    ? 'bg-gray-900 text-white border-gray-900'
-                    : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
-                }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-          <span className="ml-auto text-xs text-gray-400">{filtered.length} playbooks</span>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                {['Playbook', 'Sources', 'Status', 'Modules', 'Lessons', 'Progress', 'Updated', ''].map((h) => (
-                  <th
-                    key={h}
-                    className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-10 text-center text-sm text-gray-400">
-                    No playbooks match your filters.
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((p) => <PlaybookRow key={p.id} playbook={p} />)
-              )}
-            </tbody>
-          </table>
-        </div>
+        <Suspense
+          fallback={
+            <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-sm text-gray-400">
+              Loading playbooks…
+            </div>
+          }
+        >
+          <LibraryTable />
+        </Suspense>
       </div>
     </div>
   )
@@ -181,61 +135,53 @@ function EmptyState() {
 
   return (
     <div>
-      <ScreenHeader
-        title="Welcome to PlaybookOS"
-        subtitle="Turn any source material into a structured microlearning playbook"
-      />
-      <div className="mx-8 pb-12">
-        <div className="max-w-2xl mx-auto text-center py-10">
-          <div className="w-full h-36 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center mb-6 text-gray-300 text-sm">
-            illustration placeholder
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Your first playbook starts here.</h2>
-          <p className="text-sm text-gray-500 leading-relaxed max-w-md mx-auto mb-6">
-            Bring 1–4 sources (PDFs, GitHub repos, articles, YouTube, docs). PlaybookOS extracts the
-            ideas, builds a named framework, and structures everything into bite-sized lessons.
-          </p>
-          <Link href="/library/new">
-            <Button className="px-6 py-2.5 text-sm">+ Create Your First Playbook</Button>
-          </Link>
-          <p className="text-xs text-gray-400 mt-2">or pick a starting template below</p>
+      <div className="max-w-2xl mx-auto text-center py-10">
+        <div className="w-full h-36 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center mb-6 text-gray-300 text-sm">
+          illustration placeholder
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Your first playbook starts here.</h2>
+        <p className="text-sm text-gray-500 leading-relaxed max-w-md mx-auto mb-6">
+          Bring 1–4 sources (PDFs, GitHub repos, articles, YouTube, docs). PlaybookOS extracts the ideas, builds a
+          named framework, and structures everything into bite-sized lessons.
+        </p>
+        <Link href="/library/new">
+          <Button className="px-6 py-2.5 text-sm">+ Create Your First Playbook</Button>
+        </Link>
+        <p className="text-xs text-gray-400 mt-2">or pick a starting template below</p>
+      </div>
+
+      <div className="max-w-2xl mx-auto">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Quick Start Templates</p>
+        <div className="grid grid-cols-3 gap-3 mb-8">
+          {templates.map((t) => (
+            <Link key={t.name} href="/library/new">
+              <div className="p-4 rounded-lg border border-gray-200 bg-white hover:border-gray-400 cursor-pointer transition-colors">
+                <p className="text-sm font-semibold text-gray-800">{t.name}</p>
+                <p className="text-xs text-gray-400 mt-1">{t.desc}</p>
+              </div>
+            </Link>
+          ))}
         </div>
 
-        <div className="max-w-2xl mx-auto">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-            Quick Start Templates
-          </p>
-          <div className="grid grid-cols-3 gap-3 mb-8">
-            {templates.map((t) => (
-              <Link key={t.name} href="/library/new">
-                <div className="p-4 rounded-lg border border-gray-200 bg-white hover:border-gray-400 cursor-pointer transition-colors">
-                  <p className="text-sm font-semibold text-gray-800">{t.name}</p>
-                  <p className="text-xs text-gray-400 mt-1">{t.desc}</p>
+        <div className="p-5 bg-white border border-gray-200 rounded-xl">
+          <p className="text-xs font-bold text-gray-700 mb-4">How it works</p>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { n: '1', t: 'Add sources', d: 'PDFs, repos, URLs' },
+              { n: '2', t: 'Auto-analyze', d: 'Concepts + framework' },
+              { n: '3', t: 'Review outline', d: 'Edit modules + lessons' },
+              { n: '4', t: 'Publish', d: 'Microsite, PDF, more' },
+            ].map((s) => (
+              <div key={s.n} className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded-full border border-gray-400 flex items-center justify-center text-[11px] font-bold shrink-0 text-gray-600">
+                  {s.n}
                 </div>
-              </Link>
+                <div>
+                  <p className="text-xs font-semibold text-gray-700">{s.t}</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">{s.d}</p>
+                </div>
+              </div>
             ))}
-          </div>
-
-          <div className="p-5 bg-white border border-gray-200 rounded-xl">
-            <p className="text-xs font-bold text-gray-700 mb-4">How it works</p>
-            <div className="grid grid-cols-4 gap-4">
-              {[
-                { n: '1', t: 'Add sources', d: 'PDFs, repos, URLs' },
-                { n: '2', t: 'Auto-analyze', d: 'Concepts + framework' },
-                { n: '3', t: 'Review outline', d: 'Edit modules + lessons' },
-                { n: '4', t: 'Publish', d: 'Microsite, PDF, more' },
-              ].map((s) => (
-                <div key={s.n} className="flex items-start gap-2">
-                  <div className="w-5 h-5 rounded-full border border-gray-400 flex items-center justify-center text-[11px] font-bold shrink-0 text-gray-600">
-                    {s.n}
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-700">{s.t}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">{s.d}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>

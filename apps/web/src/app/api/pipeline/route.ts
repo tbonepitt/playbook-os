@@ -1,69 +1,117 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/stub-db'
-import { getPipelineState, updateStage } from '@/lib/pipeline-state'
+import type { PipelineState, PipelineStage, StageStatus } from '@/lib/pipeline-state'
+import { repo } from '@/lib/repo'
+import { prisma } from '@/lib/prisma'
+
+const STAGE_ORDER: PipelineStage[] = ['ingest', 'extract', 'cluster', 'framework', 'outline', 'lessons']
+
+function makeId(prefix: string) {
+  return `${prefix}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function initialState(playbookId: string): PipelineState {
+  return {
+    playbookId,
+    stages: Object.fromEntries(STAGE_ORDER.map((s) => [s, { status: 'waiting' as StageStatus }])) as PipelineState['stages'],
+  }
+}
+
+async function saveState(runId: string, state: PipelineState, status = 'running', error?: string) {
+  await prisma.pipelineRun.update({ where: { id: runId }, data: { stages: state, status, error } })
+}
+
+async function mark(runId: string, state: PipelineState, stage: PipelineStage, status: StageStatus, error?: string) {
+  state.stages[stage] = { status, error, completedAt: status === 'done' ? new Date() : undefined }
+  await saveState(runId, state, error ? 'error' : 'running', error)
+}
 
 export async function GET(req: NextRequest) {
   const playbookId = req.nextUrl.searchParams.get('playbookId')
   if (!playbookId) return NextResponse.json({ error: 'Missing playbookId' }, { status: 400 })
-  return NextResponse.json(getPipelineState(playbookId))
+
+  if (!process.env.DATABASE_URL) return NextResponse.json(initialState(playbookId))
+
+  const run = await prisma.pipelineRun.findFirst({ where: { playbookId }, orderBy: { createdAt: 'desc' } })
+  return NextResponse.json(run ? run.stages : initialState(playbookId))
 }
 
 export async function POST(req: NextRequest) {
   const { playbookId } = await req.json()
-  const playbook = db.playbooks.get(playbookId)
+  if (typeof playbookId !== 'string') return NextResponse.json({ error: 'Missing playbookId' }, { status: 400 })
+
+  const playbook = await repo.playbooks.get(playbookId)
   if (!playbook) return NextResponse.json({ error: 'Playbook not found' }, { status: 404 })
 
-  // Run pipeline async (fire and forget for now — streaming status via polling)
-  runPipeline(playbookId).catch(console.error)
+  if (!process.env.DATABASE_URL) {
+    return NextResponse.json(
+      { error: 'Generation is temporarily unavailable. Please try again later.' },
+      { status: 503 },
+    )
+  }
 
-  return NextResponse.json({ started: true })
+  const state = initialState(playbookId)
+  const run = await prisma.pipelineRun.create({ data: { id: makeId('run'), playbookId, stages: state, status: 'running' } })
+
+  try {
+    await runPipeline(run.id, playbookId, state)
+    await saveState(run.id, state, 'done')
+    return NextResponse.json({ started: true, completed: true, runId: run.id })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    await saveState(run.id, state, 'error', message)
+    return NextResponse.json({ error: message, runId: run.id }, { status: 500 })
+  }
 }
 
-async function runPipeline(playbookId: string) {
-  const { extractConcepts, generateFramework, generateOutline } = await import('@playbook-os/generators')
-  const { UrlAdapter } = await import('@playbook-os/pipeline')
+async function runPipeline(runId: string, playbookId: string, state: PipelineState) {
+  const { extractConcepts, generateFramework, generateOutline, generateLessons } = await import('@playbook-os/generators')
+  const { urlAdapter, githubAdapter } = await import('@playbook-os/pipeline')
 
-  const playbook = db.playbooks.get(playbookId)!
-  const sources = playbook.sourceIds.map((id) => db.sources.get(id)).filter(Boolean)
+  const playbook = await repo.playbooks.get(playbookId)
+  if (!playbook) throw new Error('Playbook not found')
+  const sources = await repo.playbooks.sources(playbookId)
 
-  updateStage(playbookId, 'ingest', 'running')
-  const adapter = new UrlAdapter()
+  await mark(runId, state, 'ingest', 'running')
   let combinedText = ''
-
   for (const src of sources) {
-    if (!src) continue
     try {
-      if (src.type === 'article' || src.type === 'markdown') {
-        const raw = await adapter.fetch(src)
-        combinedText += `\n\n## ${src.name}\n\n${raw.text}`
-        db.sources.update(src.id, { status: 'extracted', rawText: raw.text })
+      let text = src.rawText ?? ''
+      if (!text && (src.type === 'article' || src.type === 'markdown')) text = (await urlAdapter.fetch(src)).text
+      if (!text && src.type === 'github') text = (await githubAdapter.fetch(src)).text
+      if (text.trim()) {
+        combinedText += `\n\n## ${src.name}\n\n${text}`
+        await repo.sources.update(src.id, { status: 'extracted', rawText: text, size: `${text.length.toLocaleString()} chars` })
       }
-    } catch {
-      db.sources.update(src.id, { status: 'error' })
+    } catch (err) {
+      await repo.sources.update(src.id, { status: 'error' })
+      throw err
     }
   }
-  updateStage(playbookId, 'ingest', 'done')
+  if (!combinedText.trim()) throw new Error('No extractable source text. Add a raw text/markdown, URL/article, or GitHub source first.')
+  await mark(runId, state, 'ingest', 'done')
 
-  if (!combinedText.trim()) {
-    combinedText = sources.map((s) => `Source: ${s?.name}`).join('\n')
-  }
-
-  updateStage(playbookId, 'extract', 'running')
+  await mark(runId, state, 'extract', 'running')
   const concepts = await extractConcepts(combinedText, playbookId)
-  updateStage(playbookId, 'extract', 'done')
+  await mark(runId, state, 'extract', 'done')
 
-  updateStage(playbookId, 'cluster', 'running')
-  // Clustering is a pass-through for now; concepts already have themeId potential
-  updateStage(playbookId, 'cluster', 'done')
+  await mark(runId, state, 'cluster', 'running')
+  await mark(runId, state, 'cluster', 'done')
 
-  updateStage(playbookId, 'framework', 'running')
+  await mark(runId, state, 'framework', 'running')
   const framework = await generateFramework(concepts, playbookId)
-  db.playbooks.update(playbookId, { frameworkId: framework.id })
-  // Store framework in a side-channel (extend stub-db if needed)
-  updateStage(playbookId, 'framework', 'done')
+  await repo.frameworks.upsert(framework)
+  await mark(runId, state, 'framework', 'done')
 
-  updateStage(playbookId, 'outline', 'running')
-  const modules = await generateOutline(framework, concepts)
-  db.playbooks.update(playbookId, { modules, status: 'reviewing' })
-  updateStage(playbookId, 'outline', 'done')
+  await mark(runId, state, 'outline', 'running')
+  const outlineModules = await generateOutline(framework, concepts)
+  await repo.playbooks.update(playbookId, { modules: outlineModules, status: 'reviewing' })
+  await mark(runId, state, 'outline', 'done')
+
+  await mark(runId, state, 'lessons', 'running')
+  const lessonModules = []
+  for (const mod of outlineModules) {
+    lessonModules.push(await generateLessons(mod, concepts))
+  }
+  await repo.playbooks.update(playbookId, { modules: lessonModules, status: 'reviewing' })
+  await mark(runId, state, 'lessons', 'done')
 }

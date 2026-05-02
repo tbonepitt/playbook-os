@@ -1,13 +1,16 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { db } from '@/lib/stub-db'
+import { repo } from '@/lib/repo'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 
-export default function OutlinePage({ params }: { params: { id: string } }) {
-  const playbook = db.playbooks.get(params.id)
+export const dynamic = 'force-dynamic'
+
+export default async function OutlinePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const playbook = await repo.playbooks.get(id)
   if (!playbook) notFound()
 
   const totalMinutes = playbook.modules.reduce((sum, m) => sum + m.estimatedMinutes, 0)
@@ -21,13 +24,15 @@ export default function OutlinePage({ params }: { params: { id: string } }) {
         subtitle={`${playbook.title} — review and reorder modules before finalizing lessons`}
         action={
           <div className="flex gap-2">
-            <Link href={`/library/${params.id}/framework`}>
+            <Link href={`/library/${id}/framework`}>
               <Button variant="secondary" size="sm">← Back</Button>
             </Link>
             <Button variant="secondary" size="sm">Regenerate Outline</Button>
-            <Link href={`/library/${params.id}/outline/${playbook.modules[0]?.id ?? ''}`}>
-              <Button size="sm">Approve & Continue →</Button>
-            </Link>
+            {playbook.modules[0] && (
+              <Link href={`/library/${id}/outline/${playbook.modules[0].id}`}>
+                <Button size="sm">Approve &amp; Continue →</Button>
+              </Link>
+            )}
           </div>
         }
       />
@@ -36,7 +41,7 @@ export default function OutlinePage({ params }: { params: { id: string } }) {
         {playbook.modules.length === 0 ? (
           <Card className="p-8 text-center">
             <p className="text-sm text-gray-500 mb-3">No modules yet.</p>
-            <Link href={`/library/${params.id}/analysis`}>
+            <Link href={`/library/${id}/analysis`}>
               <Button>Run pipeline →</Button>
             </Link>
           </Card>
@@ -62,7 +67,6 @@ export default function OutlinePage({ params }: { params: { id: string } }) {
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Module Title</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Est. Time</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Lessons</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Artifacts</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</th>
                     <th className="px-4 py-3" />
                   </tr>
@@ -77,13 +81,12 @@ export default function OutlinePage({ params }: { params: { id: string } }) {
                       <td className="px-4 py-3 font-medium text-gray-900">{mod.title}</td>
                       <td className="px-4 py-3 text-xs text-gray-400">{mod.estimatedMinutes} min</td>
                       <td className="px-4 py-3 text-gray-600">{mod.lessons.length}</td>
-                      <td className="px-4 py-3 text-gray-600">{mod.artifactIds.length || '—'}</td>
                       <td className="px-4 py-3">
                         <Badge status={mod.status} />
                       </td>
                       <td className="px-4 py-3">
                         <Link
-                          href={`/library/${params.id}/outline/${mod.id}`}
+                          href={`/library/${id}/outline/${mod.id}`}
                           className="text-xs text-gray-400 hover:text-gray-900 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           Open →

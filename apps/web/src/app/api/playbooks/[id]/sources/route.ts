@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/stub-db'
+import { repo } from '@/lib/repo'
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+type RouteContext = { params: Promise<{ id: string }> }
+
+export async function POST(req: NextRequest, { params }: RouteContext) {
+  const { id } = await params
   const { sourceId } = await req.json()
-  const playbook = db.playbooks.get(params.id)
-  if (!playbook) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (typeof sourceId !== 'string') return NextResponse.json({ error: 'Missing sourceId' }, { status: 400 })
 
-  if (!playbook.sourceIds.includes(sourceId)) {
-    db.playbooks.update(params.id, { sourceIds: [...playbook.sourceIds, sourceId] })
-  }
-  return NextResponse.json({ ok: true })
+  const playbook = await repo.playbooks.get(id)
+  const source = await repo.sources.get(sourceId)
+  if (!playbook || !source) return NextResponse.json({ error: 'Playbook or source not found' }, { status: 404 })
+
+  await repo.playbooks.attachSource(id, sourceId)
+  return NextResponse.json({ attached: true })
 }
