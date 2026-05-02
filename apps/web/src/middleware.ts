@@ -18,7 +18,7 @@ export default function middleware(...args: Parameters<typeof protectedMiddlewar
   if (!hasClerkKeys()) {
     if (isPublicRoute(req)) return NextResponse.next()
 
-    return new NextResponse('Clerk is not configured for this deployment.', {
+    return new NextResponse('Service temporarily unavailable.', {
       status: 503,
       headers: { 'content-type': 'text/plain; charset=utf-8' },
     })
