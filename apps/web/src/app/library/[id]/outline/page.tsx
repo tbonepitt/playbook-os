@@ -12,16 +12,23 @@ export default function OutlinePage({ params }: { params: { id: string } }) {
 
   const totalMinutes = playbook.modules.reduce((sum, m) => sum + m.estimatedMinutes, 0)
   const totalLessons = playbook.modules.reduce((sum, m) => sum + m.lessons.length, 0)
+  const hours = (totalMinutes / 60).toFixed(1)
 
   return (
     <div>
       <ScreenHeader
-        title="Course Outline"
-        subtitle={`${playbook.modules.length} modules · ${totalLessons} lessons · ${totalMinutes} min`}
+        title="Course Outline Editor"
+        subtitle={`${playbook.title} — review and reorder modules before finalizing lessons`}
         action={
-          <Link href={`/library/${params.id}`}>
-            <Button variant="secondary" size="sm">← Back to playbook</Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href={`/library/${params.id}/framework`}>
+              <Button variant="secondary" size="sm">← Back</Button>
+            </Link>
+            <Button variant="secondary" size="sm">Regenerate Outline</Button>
+            <Link href={`/library/${params.id}/outline/${playbook.modules[0]?.id ?? ''}`}>
+              <Button size="sm">Approve & Continue →</Button>
+            </Link>
+          </div>
         }
       />
 
@@ -34,44 +41,65 @@ export default function OutlinePage({ params }: { params: { id: string } }) {
             </Link>
           </Card>
         ) : (
-          <Card className="overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-8">#</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Module</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Lessons</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Time</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</th>
-                  <th className="px-6 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {playbook.modules.map((mod) => (
-                  <tr key={mod.id} className="group hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 text-gray-400 text-xs">{mod.order}</td>
-                    <td className="px-6 py-4">
-                      <p className="font-medium text-gray-900">{mod.title}</p>
-                      <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{mod.goal}</p>
-                    </td>
-                    <td className="px-6 py-4 text-gray-500">{mod.lessons.length}</td>
-                    <td className="px-6 py-4 text-gray-500">{mod.estimatedMinutes} min</td>
-                    <td className="px-6 py-4">
-                      <Badge status={mod.status} />
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        href={`/library/${params.id}/outline/${mod.id}`}
-                        className="text-xs text-gray-400 hover:text-gray-900 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        Open →
-                      </Link>
-                    </td>
+          <>
+            {/* Summary card */}
+            <Card className="p-4 mb-4 bg-gray-50 border-gray-100">
+              <p className="font-bold text-sm text-gray-900">{playbook.title}</p>
+              <p className="text-xs text-gray-500 mt-1">{playbook.goal}</p>
+              <div className="flex gap-5 mt-3 text-xs text-gray-400">
+                <span>{playbook.modules.length} modules</span>
+                <span>{totalLessons} lessons</span>
+                <span>~{hours} hours total</span>
+              </div>
+            </Card>
+
+            <Card className="overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="px-4 py-3 w-8" />
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-10">#</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Module Title</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Est. Time</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Lessons</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Artifacts</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</th>
+                    <th className="px-4 py-3" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {playbook.modules.map((mod, i) => (
+                    <tr key={mod.id} className="group hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 text-gray-300 text-base cursor-grab">⠿</td>
+                      <td className="px-4 py-3 text-xs text-gray-400 font-mono">
+                        {String(i + 1).padStart(2, '0')}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-gray-900">{mod.title}</td>
+                      <td className="px-4 py-3 text-xs text-gray-400">{mod.estimatedMinutes} min</td>
+                      <td className="px-4 py-3 text-gray-600">{mod.lessons.length}</td>
+                      <td className="px-4 py-3 text-gray-600">{mod.artifactIds.length || '—'}</td>
+                      <td className="px-4 py-3">
+                        <Badge status={mod.status} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/library/${params.id}/outline/${mod.id}`}
+                          className="text-xs text-gray-400 hover:text-gray-900 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          Open →
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="px-4 py-3 border-t border-gray-50">
+                <button className="text-xs text-gray-400 hover:text-gray-700 transition-colors">
+                  + Add Module
+                </button>
+              </div>
+            </Card>
+          </>
         )}
       </div>
     </div>
