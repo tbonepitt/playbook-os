@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
   if (!process.env.DATABASE_URL) {
     return NextResponse.json(
-      { error: 'DATABASE_URL is not configured yet. Add a Postgres database before running generation.' },
+      { error: 'Generation is temporarily unavailable. Please try again later.' },
       { status: 503 },
     )
   }
