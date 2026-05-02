@@ -8,6 +8,10 @@ import type { Source } from '@playbook-os/core'
 
 export const dynamic = 'force-dynamic'
 
+function isExternalUrl(value: string | undefined) {
+  return Boolean(value && /^https?:\/\//i.test(value))
+}
+
 const TYPE_LABEL: Record<Source['type'], string> = {
   pdf: 'PDF',
   github: 'GH',
@@ -61,8 +65,20 @@ export default async function SourcesPage() {
                           {TYPE_LABEL[src.type]}
                         </span>
                         <div>
-                          <p className="font-medium text-gray-900">{src.name}</p>
-                          {src.url && <p className="text-xs text-gray-400 truncate max-w-xs">{src.url}</p>}
+                          <Link href={`/sources/${src.id}`} className="font-medium text-gray-900 hover:underline">
+                            {src.name}
+                          </Link>
+                          {src.url && (
+                            <p className="max-w-xs truncate text-xs text-gray-400">
+                              {isExternalUrl(src.url) ? (
+                                <a href={src.url} target="_blank" rel="noreferrer" className="hover:text-gray-700 hover:underline">
+                                  {src.url}
+                                </a>
+                              ) : (
+                                'Pasted text / markdown'
+                              )}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -75,12 +91,16 @@ export default async function SourcesPage() {
                       {src.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </td>
                     <td className="px-6 py-4">
-                      <Link
-                        href={`/sources/${src.id}`}
-                        className="text-xs text-gray-400 hover:text-gray-900 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        View →
-                      </Link>
+                      <div className="flex items-center justify-end gap-3">
+                        {isExternalUrl(src.url) && (
+                          <a href={src.url} target="_blank" rel="noreferrer" className="text-xs font-medium text-gray-400 hover:text-gray-900">
+                            Original ↗
+                          </a>
+                        )}
+                        <Link href={`/sources/${src.id}`} className="text-xs font-medium text-gray-500 hover:text-gray-900">
+                          Details →
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
