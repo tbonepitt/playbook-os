@@ -3,11 +3,11 @@ import { GoogleGenAI } from '@google/genai'
 // Typed access to Node/edge-runtime env without requiring @types/node
 declare const process: { env: Record<string, string | undefined> }
 
-// Model priority list — first available wins
+// Model priority list — first available wins (flash/lite only, no pro)
 const MODELS = [
   'gemini-2.5-flash',
   'gemini-2.0-flash-lite',
-  'gemini-1.5-pro',
+  'gemini-1.5-flash-latest',
 ]
 
 function getClient(): GoogleGenAI {
