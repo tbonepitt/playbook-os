@@ -1,7 +1,5 @@
 import type { Concept, Framework, Module, Lesson } from '@playbook-os/core'
-import { cachedMessages } from './client'
-
-const MODEL = 'claude-sonnet-4-6'
+import { generate } from './client'
 
 function stripCodeFences(raw: string): string {
   return raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
@@ -11,26 +9,10 @@ function newId(): string {
   return Math.random().toString(36).slice(2, 10)
 }
 
-type RawLesson = {
-  title: string
-  estimatedMinutes?: number
-}
+type RawLesson = { title: string; estimatedMinutes?: number }
+type RawModule = { title: string; goal: string; estimatedMinutes: number; lessons: RawLesson[] }
 
-type RawModule = {
-  title: string
-  goal: string
-  estimatedMinutes: number
-  lessons: RawLesson[]
-}
-
-/**
- * Generate a full course outline — one module per framework pillar, each with
- * 2–4 lesson stubs. Returns `Module[]` ready to attach to a Playbook.
- */
-export async function generateOutline(
-  framework: Framework,
-  concepts: Concept[],
-): Promise<Module[]> {
+export async function generateOutline(framework: Framework, concepts: Concept[]): Promise<Module[]> {
   const systemPrompt = `You are a curriculum architect. Given a framework with named pillars and a list of source concepts, you design a complete course outline.
 
 Produce one module per pillar. Each module should have 2–4 lesson stubs — enough to fully cover the pillar without padding.
@@ -51,30 +33,15 @@ Rules:
 - estimatedMinutes for the module should equal the sum of its lessons' estimatedMinutes.
 - Output valid JSON only — an array, not a wrapped object.`
 
-  const pillarList = framework.pillars
-    .map((p) => `${p.letter} — ${p.name}: ${p.description}`)
-    .join('\n')
+  const pillarList = framework.pillars.map((p) => `${p.letter} — ${p.name}: ${p.description}`).join('\n')
   const conceptList = concepts.map((c) => `• ${c.label}`).join('\n')
-
   const userPrompt = `Generate a course outline for the "${framework.name}" framework.\n\nPillars:\n${pillarList}\n\nSource concepts to cover:\n${conceptList}`
 
-  let text = ''
+  let text: string
   try {
-    const msg = await cachedMessages.create({
-      model: MODEL,
-      max_tokens: 4096,
-      system: [
-        {
-          type: 'text',
-          text: systemPrompt,
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
-      messages: [{ role: 'user', content: userPrompt }],
-    })
-    text = msg.content[0].type === 'text' ? msg.content[0].text : ''
+    text = await generate(systemPrompt, userPrompt)
   } catch (err) {
-    throw new Error(`generateOutline: Anthropic API call failed: ${String(err)}`)
+    throw new Error(`generateOutline: Gemini API call failed: ${String(err)}`)
   }
 
   let rawModules: RawModule[]
@@ -82,32 +49,26 @@ Rules:
     rawModules = JSON.parse(stripCodeFences(text))
   } catch (err) {
     throw new Error(
-      `generateOutline: failed to parse JSON response from Claude. ` +
-        `Raw response: ${text.slice(0, 300)}. Parse error: ${String(err)}`,
+      `generateOutline: failed to parse JSON response. Raw: ${text.slice(0, 300)}. Error: ${String(err)}`,
     )
   }
 
   if (!Array.isArray(rawModules)) {
-    throw new Error(
-      `generateOutline: expected a JSON array but got ${typeof rawModules}`,
-    )
+    throw new Error(`generateOutline: expected JSON array but got ${typeof rawModules}`)
   }
 
   return rawModules.map((rawMod, modIdx) => {
     const pillar = framework.pillars[modIdx]
+    const lessons: Lesson[] = (rawMod.lessons ?? []).map((rawLesson, lessonIdx) => ({
+      id: newId(),
+      order: lessonIdx + 1,
+      title: rawLesson.title,
+      cards: [],
+      estimatedMinutes: rawLesson.estimatedMinutes ?? 5,
+      status: 'draft' as const,
+    }))
 
-    const lessons: Lesson[] = (rawMod.lessons ?? []).map(
-      (rawLesson, lessonIdx) => ({
-        id: newId(),
-        order: lessonIdx + 1,
-        title: rawLesson.title,
-        cards: [],
-        estimatedMinutes: rawLesson.estimatedMinutes ?? 5,
-        status: 'draft' as const,
-      }),
-    )
-
-    const module: Module = {
+    return {
       id: newId(),
       order: modIdx + 1,
       title: rawMod.title,
@@ -118,8 +79,6 @@ Rules:
       artifactIds: [],
       citationIds: [],
       status: 'draft' as const,
-    }
-
-    return module
+    } satisfies Module
   })
 }

@@ -30,7 +30,16 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/library/pb-1/outline)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/library/pb-1/publish)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/sources)",
-      "Bash(vercel --version)"
+      "Bash(vercel --version)",
+      "Bash(gh --version)",
+      "Bash(git pull *)",
+      "Bash(git checkout *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/library)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/frameworks)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/toolkit)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/p/pb-1)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/library/pb-1/sources-add)",
+      "Bash(DIRECT_URL=\"postgresql://neondb_owner:npg_3YQTdKqvW6fw@ep-empty-surf-ano6i3zy.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" DATABASE_URL=\"postgresql://neondb_owner:npg_3YQTdKqvW6fw@ep-empty-surf-ano6i3zy-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require&pgbouncer=true\" npx prisma migrate deploy)"
     ]
   }
 }

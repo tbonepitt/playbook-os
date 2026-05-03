@@ -1,7 +1,5 @@
 import type { Concept, Framework, Pillar } from '@playbook-os/core'
-import { cachedMessages } from './client'
-
-const MODEL = 'claude-sonnet-4-6'
+import { generate } from './client'
 
 function stripCodeFences(raw: string): string {
   return raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
@@ -17,14 +15,7 @@ type RawFramework = {
   alternateNames: string[]
 }
 
-/**
- * Generate a named acronym framework from a list of concepts.
- * Returns a `Framework` ready to attach to a Playbook.
- */
-export async function generateFramework(
-  concepts: Concept[],
-  playbookId: string,
-): Promise<Framework> {
+export async function generateFramework(concepts: Concept[], playbookId: string): Promise<Framework> {
   const systemPrompt = `You are a curriculum-design expert who specialises in creating memorable teaching frameworks. Given a list of key concepts, you create a concise acronym framework (3–6 pillars) that organises those concepts into a coherent, teachable structure.
 
 Return ONLY a JSON object — no prose, no markdown fences — with this shape:
@@ -47,23 +38,11 @@ Rules:
   const conceptList = concepts.map((c) => `• ${c.label}`).join('\n')
   const userPrompt = `Create an acronym framework for a playbook (playbookId: ${playbookId}) based on these concepts:\n\n${conceptList}`
 
-  let text = ''
+  let text: string
   try {
-    const msg = await cachedMessages.create({
-      model: MODEL,
-      max_tokens: 4096,
-      system: [
-        {
-          type: 'text',
-          text: systemPrompt,
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
-      messages: [{ role: 'user', content: userPrompt }],
-    })
-    text = msg.content[0].type === 'text' ? msg.content[0].text : ''
+    text = await generate(systemPrompt, userPrompt)
   } catch (err) {
-    throw new Error(`generateFramework: Anthropic API call failed: ${String(err)}`)
+    throw new Error(`generateFramework: Gemini API call failed: ${String(err)}`)
   }
 
   let raw: RawFramework
@@ -71,8 +50,7 @@ Rules:
     raw = JSON.parse(stripCodeFences(text))
   } catch (err) {
     throw new Error(
-      `generateFramework: failed to parse JSON response from Claude. ` +
-        `Raw response: ${text.slice(0, 300)}. Parse error: ${String(err)}`,
+      `generateFramework: failed to parse JSON response. Raw: ${text.slice(0, 300)}. Error: ${String(err)}`,
     )
   }
 
@@ -84,13 +62,11 @@ Rules:
     conceptIds: [],
   }))
 
-  const framework: Framework = {
+  return {
     id: newId(),
     playbookId,
     name: raw.name,
     pillars,
     alternateNames: raw.alternateNames ?? [],
   }
-
-  return framework
 }

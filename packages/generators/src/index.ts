@@ -1,4 +1,4 @@
-export { anthropic } from './client'
+export { generate } from './client'
 export { extractConcepts } from './extract-concepts'
 export { generateFramework } from './generate-framework'
 export { generateOutline } from './generate-outline'

@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PlaybookOS — Wireframe Prototype</title>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Helvetica, Arial, sans-serif; background: #f0f0f0; color: #111; height: 100vh; overflow: hidden; }
+  #root { height: 100vh; display: flex; }
+
+  /* Wireframe tokens */
+  :root {
+    --bg: #f4f4f4;
+    --surface: #ffffff;
+    --border: #cccccc;
+    --border-dark: #999999;
+    --text: #111111;
+    --text-mid: #555555;
+    --text-light: #888888;
+    --accent: #222222;
+    --tag-bg: #e8e8e8;
+    --tag-border: #bbb;
+    --sidebar-w: 200px;
+  }
+
+  /* Layout */
+  .app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+  .sidebar {
+    width: var(--sidebar-w);
+    background: #1e1e1e;
+    color: #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    border-right: 2px solid #333;
+    padding: 0;
+  }
+  .sidebar-logo {
+    padding: 18px 16px 14px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid #333;
+    color: #fff;
+    text-transform: uppercase;
+  }
+  .sidebar-logo span { font-weight: 300; color: #888; }
+  .sidebar-nav { flex: 1; padding: 12px 0; }
+  .nav-section { padding: 4px 16px 2px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 10px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    color: #aaa;
+    border-left: 2px solid transparent;
+    transition: background 0.1s;
+  }
+  .nav-item:hover { background: #2a2a2a; color: #fff; }
+  .nav-item.active { background: #2e2e2e; color: #fff; border-left-color: #fff; }
+  .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.5; }
+  .sidebar-footer { padding: 14px 16px; border-top: 1px solid #333; font-size: 12px; color: #555; }
+
+  /* Main area */
+  .main { flex: 1; overflow-y: auto; background: var(--bg); }
+  .screen { min-height: 100%; }
+
+  /* Screen header */
+  .screen-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 28px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .screen-title { font-size: 20px; font-weight: 700; }
+  .screen-subtitle { font-size: 13px; color: var(--text-mid); margin-top: 2px; }
+  .screen-body { padding: 24px 28px; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border: 1.5px solid var(--border-dark);
+    background: var(--surface); color: var(--text);
+    font-size: 13px; font-family: inherit; cursor: pointer;
+    border-radius: 3px; font-weight: 500;
+  }
+  .btn:hover { background: #ebebeb; }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: #333; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-ghost { border-color: transparent; background: transparent; }
+  .btn-ghost:hover { background: #ebebeb; border-color: var(--border); }
+
+  /* Tags / chips */
+  .chip {
+    display: inline-block; padding: 3px 9px;
+    background: var(--tag-bg); border: 1px solid var(--tag-border);
+    border-radius: 2px; font-size: 12px; color: var(--text-mid);
+  }
+  .chip.active { background: #222; color: #fff; border-color: #222; }
+  .status-chip {
+    display: inline-block; padding: 2px 8px;
+    border-radius: 2px; font-size: 11px; font-weight: 600; letter-spacing: 0.03em;
+    border: 1px solid;
+  }
+  .status-draft { background: #f0f0f0; color: #666; border-color: #ccc; }
+  .status-reviewing { background: #e8e8e8; color: #444; border-color: #aaa; }
+  .status-published { background: #222; color: #fff; border-color: #222; }
+
+  /* Cards */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 3px; padding: 16px;
+  }
+
+  /* Table */
+  .table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); }
+  .table th {
+    text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-mid);
+    background: #f8f8f8; border-bottom: 1px solid var(--border);
+  }
+  .table td {
+    padding: 12px 14px; font-size: 13px; border-bottom: 1px solid #ebebeb;
+    vertical-align: middle;
+  }
+  .table tr:last-child td { border-bottom: none; }
+  .table tr:hover td { background: #fafafa; }
+  .table .link { color: #111; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .table .link:hover { color: #444; }
+
+  /* Form elements */
+  .form-group { margin-bottom: 18px; }
+  .form-label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-mid); text-transform: uppercase; letter-spacing: 0.04em; }
+  .form-input, .form-select, .form-textarea {
+    width: 100%; padding: 9px 12px; border: 1.5px solid var(--border);
+    font-size: 14px; font-family: inherit; border-radius: 3px; background: #fff;
+    color: var(--text); outline: none;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: #666; }
+  .form-textarea { resize: vertical; min-height: 72px; }
+
+  /* Progress bar */
+  .progress-bar { height: 4px; background: #ddd; border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #222; border-radius: 2px; transition: width 0.3s; }
+
+  /* Divider */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  /* Drag handle */
+  .drag-handle { color: #bbb; font-size: 14px; cursor: grab; user-select: none; }
+
+  /* Annotation box (wireframe callout) */
+  .annotation {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; color: #888; font-style: italic;
+    border: 1px dashed #ccc; padding: 3px 8px; border-radius: 2px;
+    background: #fafafa;
+  }
+
+  /* Breadcrumb */
+  .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-light); margin-bottom: 18px; }
+  .breadcrumb-sep { color: #bbb; }
+  .breadcrumb-link { cursor: pointer; color: var(--text-mid); }
+  .breadcrumb-link:hover { text-decoration: underline; }
+
+  /* Placeholder image box */
+  .img-placeholder {
+    background: repeating-linear-gradient(
+      45deg, #ebebeb, #ebebeb 4px, #f4f4f4 4px, #f4f4f4 10px
+    );
+    border: 1.5px dashed #bbb; border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    color: #999; font-size: 12px; font-style: italic; text-align: center;
+  }
+
+  /* Step indicator */
+  .stepper { display: flex; align-items: center; gap: 0; margin-bottom: 24px; }
+  .step {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--text-light); flex: 1;
+  }
+  .step-num {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 1.5px solid #bbb; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; flex-shrink: 0;
+    background: #fff; color: #999;
+  }
+  .step.done .step-num { background: #222; border-color: #222; color: #fff; }
+  .step.active .step-num { border-color: #222; color: #222; }
+  .step.active { color: #222; font-weight: 600; }
+  .step-line { flex: 1; height: 1px; background: #ddd; margin: 0 4px; }
+  .step.done .step-line { background: #555; }
+
+  /* Lesson card styles */
+  .lesson-card-wrap { max-width: 640px; margin: 0 auto; }
+  .lesson-card {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 4px; padding: 28px 32px;
+    min-height: 240px; position: relative;
+  }
+  .lesson-card-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text-light); font-weight: 600; margin-bottom: 12px;
+  }
+  .lesson-card-title { font-size: 22px; font-weight: 700; line-height: 1.3; margin-bottom: 12px; }
+  .lesson-card-body { font-size: 15px; line-height: 1.65; color: var(--text-mid); }
+  .lesson-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; }
+  .quiz-option {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 14px; border: 1.5px solid var(--border);
+    border-radius: 3px; margin-bottom: 8px; cursor: pointer;
+    font-size: 14px; background: #fff;
+  }
+  .quiz-option:hover { border-color: #888; background: #fafafa; }
+  .quiz-option.selected { border-color: #222; background: #f0f0f0; }
+  .quiz-option.correct { border-color: #444; background: #e8e8e8; }
+  .quiz-option-key {
+    width: 22px; height: 22px; border: 1.5px solid #bbb;
+    border-radius: 2px; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .quiz-option.selected .quiz-option-key { background: #222; color: #fff; border-color: #222; }
+  .quiz-option.correct .quiz-option-key { background: #444; color: #fff; border-color: #444; }
+
+  /* Two-col layout */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  /* Concept tag list */
+  .concept-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  /* Source list */
+  .source-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; border: 1px solid var(--border);
+    background: #fff; border-radius: 3px; margin-bottom: 6px;
+  }
+  .source-icon {
+    width: 28px; height: 28px; border: 1.5px solid #bbb;
+    border-radius: 3px; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #666; background: #f4f4f4;
+    flex-shrink: 0;
+  }
+
+  /* Artifact list */
+  .artifact-row {
+    padding: 10px 14px; border-bottom: 1px solid #ebebeb;
+    cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+  }
+  .artifact-row:hover { background: #f8f8f8; }
+  .artifact-row.active { background: #f0f0f0; border-left: 2px solid #222; }
+
+  /* Checklist */
+  .check-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+  .check-box { width: 16px; height: 16px; border: 1.5px solid #bbb; border-radius: 2px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .check-box.done { border-color: #444; background: #444; color: #fff; }
+
+  /* Framework pillar */
+  .pillar-card {
+    border: 1.5px solid var(--border); border-radius: 3px;
+    padding: 12px 14px; background: #fff;
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .pillar-letter {
+    width: 32px; height: 32px; border: 2px solid #333;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 900; flex-shrink: 0; border-radius: 2px;
+  }
+
+  /* Publish output card */
+  .output-card {
+    border: 1.5px solid var(--border); border-radius: 3px;
+    padding: 14px 16px; background: #fff; cursor: pointer;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .output-card:hover { border-color: #888; }
+  .output-card.active { border-color: #222; }
+  .output-card-label { font-size: 13px; font-weight: 600; }
+  .output-card-sub { font-size: 12px; color: #888; }
+
+  /* Analysis stage */
+  .stage-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 12px; border-radius: 3px; font-size: 13px;
+  }
+  .stage-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .stage-dot.done { background: #333; }
+  .stage-dot.active { background: #888; border: 2px solid #333; }
+  .stage-dot.waiting { background: #ddd; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+/* ─── DATA ─── */
+const PLAYBOOKS = [
+  { id: 1, title: "Agentic Systems Builder Playbook", sources: ["PDF","GitHub","YouTube"], status: "reviewing", modules: 9, lessons: 47, updated: "Apr 28", progress: 72 },
+  { id: 2, title: "AI Product Builder Playbook", sources: ["Docs","PDF","Article"], status: "draft", modules: 7, lessons: 31, updated: "Apr 22", progress: 35 },
+  { id: 3, title: "Product Strategy Sprint Playbook", sources: ["PDF","Notion"], status: "published", modules: 6, lessons: 24, updated: "Apr 10", progress: 100 },
+  { id: 4, title: "Customer Discovery Playbook", sources: ["YouTube","Article","PDF"], status: "published", modules: 5, lessons: 18, updated: "Mar 30", progress: 100 },
+  { id: 5, title: "LLM Evaluation Playbook", sources: ["GitHub","Docs","PDF"], status: "draft", modules: 4, lessons: 12, updated: "Apr 29", progress: 15 },
+];
+
+const MODULES = [
+  { id: 1, title: "Agents Are Systems, Not Prompts", time: "22 min", lessons: 5, artifacts: 2, status: "ready" },
+  { id: 2, title: "Goals, Boundaries, and Autonomy", time: "18 min", lessons: 4, artifacts: 1, status: "ready" },
+  { id: 3, title: "The Agentic Design Stack", time: "25 min", lessons: 6, artifacts: 2, status: "ready" },
+  { id: 4, title: "Choosing the Right Pattern", time: "20 min", lessons: 5, artifacts: 3, status: "ready" },
+  { id: 5, title: "Tool Use and MCP", time: "28 min", lessons: 7, artifacts: 2, status: "ready" },
+  { id: 6, title: "Memory, State, and Context", time: "22 min", lessons: 5, artifacts: 2, status: "draft" },
+  { id: 7, title: "Planning, Reflection, and Recovery", time: "24 min", lessons: 6, artifacts: 3, status: "draft" },
+  { id: 8, title: "Guardrails, Evals, and Human Control", time: "26 min", lessons: 6, artifacts: 3, status: "draft" },
+  { id: 9, title: "Production Readiness", time: "20 min", lessons: 4, artifacts: 2, status: "draft" },
+];
+
+const ARTIFACTS = [
+  "Agent Brief Builder", "Pattern Picker", "Tool Contract Template",
+  "Memory Policy Worksheet", "Reflection Loop Control Checklist",
+  "Agent Evaluation Rubric", "Human Escalation Matrix",
+  "Production Readiness Scorecard", "Agentic System Design Spec"
+];
+
+const CONCEPTS = [
+  "Prompt chaining", "Routing", "Parallelization", "Tool use", "Planning",
+  "Reflection", "Multi-agent collaboration", "Memory", "MCP", "Guardrails",
+  "Human-in-the-loop", "Evaluation", "Monitoring", "Exception handling", "Production readiness"
+];
+
+const ANALYSIS_STAGES = [
+  "Ingesting source",
+  "Extracting concepts",
+  "Clustering themes",
+  "Identifying examples",
+  "Building source map",
+  "Creating framework",
+  "Designing course outline",
+  "Generating lessons",
+  "Creating templates",
+  "Preparing publishable playbook",
+];
+
+const PILLARS = [
+  { letter: "A", name: "Aim", desc: "Define outcomes, users, boundaries, and autonomy level" },
+  { letter: "G", name: "Gather", desc: "Provide context, tools, memory, retrieval, and state" },
+  { letter: "E", name: "Execute", desc: "Choose orchestration patterns: chaining, routing, planning, delegation" },
+  { letter: "N", name: "Notice", desc: "Evaluate, reflect, recover, monitor, and escalate" },
+  { letter: "T", name: "Tune", desc: "Improve prompts, tools, costs, latency, evals, and production readiness" },
+];
+
+const ALT_NAMES = ["P.A.T.H.", "C.L.E.A.R.", "O.R.B.I.T.", "S.T.A.C.K.", "L.O.O.P."];
+
+const LESSON_CARDS = [
+  {
+    label: "01 — Big Idea",
+    title: "The hard part isn't making an LLM take action.",
+    body: "The hard part is designing the system around that action — the goals, context, permissions, state, recovery paths, and evaluation that make action trustworthy.",
+    type: "text"
+  },
+  {
+    label: "02 — Plain-English Explanation",
+    title: "An agent is not a prompt with tools.",
+    body: "An agent is a system. It has goals it is trying to accomplish, context it needs to work with, state it must track, permissions that bound its reach, recovery paths when things break, and evaluation criteria to know when it succeeded.",
+    type: "text"
+  },
+  {
+    label: "03 — Visual Metaphor",
+    title: "Agents as control systems",
+    body: null,
+    type: "image",
+    placeholder: "Diagram: Agent loop — Perceive → Plan → Act → Observe → Reflect"
+  },
+  {
+    label: "04 — Example",
+    title: "A customer support agent",
+    body: "It does not just call a refund API. It checks order status, verifies eligibility, logs the action, escalates if the amount exceeds a threshold, confirms with the user, and records the outcome for evaluation.",
+    type: "text"
+  },
+  {
+    label: "05 — Common Mistake",
+    title: "Letting the model 'figure it out'",
+    body: "Skipping the definition of boundaries, tool contracts, or stop criteria. The model does not know when to stop, what counts as success, or how to recover from a failed tool call.",
+    type: "mistake"
+  },
+  {
+    label: "06 — Quick Check",
+    title: "Which of these makes an agent safer to deploy?",
+    body: null,
+    type: "quiz",
+    options: [
+      { key: "A", text: "A longer prompt" },
+      { key: "B", text: "A stronger model" },
+      { key: "C", text: "Clear tools, guardrails, evals, and escalation paths" },
+      { key: "D", text: "More autonomy by default" },
+    ],
+    correct: "C"
+  },
+  {
+    label: "07 — Apply It",
+    title: "Write it down.",
+    body: "Write a one-sentence mission and one hard boundary for an agent you would trust to run unsupervised in your workflow.",
+    type: "apply"
+  },
+  {
+    label: "08 — Source Reference",
+    title: "Where this came from",
+    body: "Agentic Design Patterns PDF — Section 2: System Design Foundations\nAndrews et al., Chapter 3: Agent Architectures",
+    type: "source"
+  },
+];
+
+/* ─── NAV CONFIG ─── */
+const NAV_ITEMS = [
+  { id: "library", label: "Library", section: "workspace" },
+  { id: "sources", label: "Sources", section: "workspace" },
+  { id: "playbooks", label: "Playbooks", section: "workspace" },
+  { id: "frameworks", label: "Frameworks", section: "build" },
+  { id: "toolkit", label: "Toolkit", section: "build" },
+  { id: "publish", label: "Publish", section: "build" },
+  { id: "microsite", label: "Learner View", section: "build" },
+  { id: "empty", label: "First Run", section: "system" },
+  { id: "settings", label: "Settings", section: "system" },
+];
+
+/* ─── SIDEBAR ─── */
+function Sidebar({ active, onNav }) {
+  return (
+    <div className="sidebar">
+      <div className="sidebar-logo">Playbook<span>OS</span></div>
+      <div className="sidebar-nav">
+        <div className="nav-section">Workspace</div>
+        {NAV_ITEMS.filter(n => n.section === "workspace").map(n => (
+          <div key={n.id} className={`nav-item ${active === n.id ? "active" : ""}`} onClick={() => onNav(n.id)}>
+            <span className="nav-dot"></span>{n.label}
+          </div>
+        ))}
+        <div className="nav-section">Build</div>
+        {NAV_ITEMS.filter(n => n.section === "build").map(n => (
+          <div key={n.id} className={`nav-item ${active === n.id ? "active" : ""}`} onClick={() => onNav(n.id)}>
+            <span className="nav-dot"></span>{n.label}
+          </div>
+        ))}
+        <div className="nav-section">System</div>
+        {NAV_ITEMS.filter(n => n.section === "system").map(n => (
+          <div key={n.id} className={`nav-item ${active === n.id ? "active" : ""}`} onClick={() => onNav(n.id)}>
+            <span className="nav-dot"></span>{n.label}
+          </div>
+        ))}
+      </div>
+      <div className="sidebar-footer">v0.1 prototype</div>
+    </div>
+  );
+}
+
+/* ─── SCREEN 1: DASHBOARD ─── */
+function Dashboard({ onNav, onOpen }) {
+  return (
+    <div className="screen">
+      <div className="screen-header">
+        <div>
+          <div className="screen-title">Library</div>
+          <div className="screen-subtitle">Your private collection of generated playbooks</div>
+        </div>
+        <button className="btn btn-primary" onClick={() => onNav("create")}>+ Create New Playbook</button>
+      </div>
+      <div className="screen-body">
+        <div style={{display:"flex",gap:"12px",marginBottom:"18px",alignItems:"center"}}>
+          <input className="form-input" style={{maxWidth:260}} placeholder="Search playbooks…" readOnly />
+          <div style={{display:"flex",gap:"6px"}}>
+            <span className="chip active">All</span>
+            <span className="chip">Draft</span>
+            <span className="chip">Reviewing</span>
+            <span className="chip">Published</span>
+          </div>
+          <span style={{marginLeft:"auto",fontSize:"12px",color:"#888"}}>5 playbooks</span>
+        </div>
+
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Playbook</th>
+              <th>Sources</th>
+              <th>Status</th>
+              <th>Modules</th>
+              <th>Lessons</th>
+              <th>Progress</th>
+              <th>Updated</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {PLAYBOOKS.map(p => (
+              <tr key={p.id}>
+                <td>
+                  <span className="link" onClick={() => onOpen(p)}>{p.title}</span>
+                </td>
+                <td>
+                  <div style={{display:"flex",gap:"4px",flexWrap:"wrap"}}>
+                    {p.sources.map(s => <span key={s} className="chip" style={{fontSize:"11px",padding:"2px 6px"}}>{s}</span>)}
+                  </div>
+                </td>
+                <td>
+                  <span className={`status-chip status-${p.status}`}>{p.status.charAt(0).toUpperCase()+p.status.slice(1)}</span>
+                </td>
+                <td style={{color:"#444"}}>{p.modules}</td>
+                <td style={{color:"#444"}}>{p.lessons}</td>
+                <td style={{minWidth:100}}>
+                  <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+                    <div className="progress-bar" style={{flex:1}}>
+                      <div className="progress-fill" style={{width:`${p.progress}%`}}></div>
+                    </div>
+                    <span style={{fontSize:"11px",color:"#888",flexShrink:0}}>{p.progress}%</span>
+                  </div>
+                </td>
+                <td style={{color:"#888",fontSize:"12px"}}>{p.updated}</td>
+                <td>
+                  <button className="btn btn-sm btn-ghost" onClick={() => onOpen(p)}>Open →</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SCREEN 2: CREATE NEW PLAYBOOK ─── */
+function CreatePlaybook({ onNav }) {
+  const outputTypes = ["Private study course","Public playbook","Lead magnet","Workshop","Consulting artifact","Newsletter sequence"];
+  const [selected, setSelected] = useState(["Public playbook","Private study course"]);
+  return (
+    <div className="screen">
+      <div className="screen-header">
+        <div>
+          <div className="screen-title">Create New Playbook</div>
+          <div className="screen-subtitle">Define your learning product before adding sources</div>
+        </div>
+        <div style={{display:"flex",gap:"8px"}}>
+          <button className="btn" onClick={() => onNav("library")}>Cancel</button>
+          <button className="btn btn-primary" onClick={() => onNav("sources-add")}>Next: Add Sources →</button>
+        </div>
+      </div>
+      <div className="screen-body">
+        <div style={{maxWidth:680}}>
+          <div className="form-group">
+            <label className="form-label">Working Title</label>
+            <input className="form-input" defaultValue="Agentic Systems Builder Playbook" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Target Audience</label>
+            <input className="form-input" defaultValue="Product builders, operators, technical leaders, AI builders" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Learning Goal</label>
+            <textarea className="form-textarea" defaultValue="Learn how to design reliable agentic systems using practical patterns for tools, memory, planning, reflection, guardrails, and evaluation." style={{minHeight:80}} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Tone / Style</label>
+            <input className="form-input" defaultValue="Clear, sharp, practical, product-builder oriented" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Output Type <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,color:"#aaa"}}>(select all that apply)</span></label>
+            <div style={{display:"flex",flexWrap:"wrap",gap:"8px",marginTop:4}}>
+              {outputTypes.map(t => (
+                <span
+                  key={t}
+                  className={`chip ${selected.includes(t) ? "active" : ""}`}
+                  style={{cursor:"pointer",padding:"6px 12px",fontSize:"13px"}}
+                  onClick={() => setSelected(s => s.includes(t) ? s.filter(x=>x!==t) : [...s,t])}
+                >{t}</span>
+              ))}
+            </div>
+          </div>
+          <hr className="divider" />
+          <div className="annotation">↑ Fields pre-filled with example values for prototype demonstration</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SCREEN 3: ADD SOURCES ─── */
+function AddSources({ onNav }) {
+  const sourceTypes = ["PDF","GitHub","Docs site","YouTube","Article","Markdown","Google Doc / Notion"];
+  const [type, setType] = useState("PDF");
+  const sources = [
+    { type: "PDF", label: "Agentic Design Patterns PDF", url: "drive.google.com/…/agentic-patterns.pdf", status: "validated" },
+    { type: "GitHub", label: "Agentic Design Patterns Notebooks", url: "github.com/anthropics/agentic-patterns", status: "validated" },
+    { type: "YouTube", label: "Building Agents with Claude — Anthropic Talk", url: "youtube.com/watch?v=…", status: "pending" },
+  ];
+  return (
+    <div className="screen">
+      <div className="screen-header">
+        <div>
+          <div className="screen-title">Add Sources</div>
+          <div className="screen-subtitle">Agentic Systems Builder Playbook</div>
+        </div>
+        <div style={{display:"flex",gap:"8px"}}>
+          <button className="btn" onClick={() => onNav("create")}>← Back</button>
+          <button className="btn btn-primary" onClick={() => onNav("analysis")}>Continue to Analysis →</button>
+        </div>
+      </div>
+      <div className="screen-body">
+        <div className="two-col" style={{alignItems:"flex-start"}}>
+          <div>
+            <div className="card" style={{marginBottom:16}}>
+              <div className="form-label" style={{marginBottom:10}}>Source Type</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:16}}>
+                {sourceTypes.map(t => (
+                  <span key={t} className={`chip ${type===t?"active":""}`} style={{cursor:"pointer"}} onClick={()=>setType(t)}>{t}</span>
+                ))}
+              </div>
+              <div className="form-label">URL or File Path</div>
+              <div style={{display:"flex",gap:"8px",marginBottom:12}}>
+                <input className="form-input" placeholder={type === "PDF" ? "https:// or drag & drop" : type === "GitHub" ? "github.com/owner/repo" : "https://"} style={{flex:1}} readOnly />
+                <button className="btn">Browse</button>
+              </div>
+              <button className="btn btn-primary" style={{width:"100%"}}>+ Add Source</button>
+            </div>
+
+            <div className="annotation" style={{marginBottom:14}}>Supported: PDF, GitHub repo, docs site, YouTube, article, Markdown folder, Notion/Google Doc export</div>
+          </div>
+
+          <div>
+            <div className="form-label" style={{marginBottom:10}}>Added Sources ({sources.length})</div>
+            {sources.map((s, i) => (
+              <div key={i} className="source-row">
+                <div className="source-icon">{s.type.slice(0,2).toUpperCase()}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:"13px",fontWeight:600}}>{s.label}</div>
+                  <div style={{fontSize:"11px",color:"#888",marginTop:2}}>{s.url}</div>
+                </div>
+                <span className={`status-chip ${s.status==="validated" ? "status-published" : "status-draft"}`}>{s.status}</span>
+                <button className="btn btn-sm btn-ghost">✕</button>
+              </div>
+            ))}
+            <button className="btn btn-sm btn-ghost" style={{marginTop:8}}>Validate All Sources</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SCREEN 4: SOURCE ANALYSIS ─── */
+function SourceAnalysis({ onNav }) {
+  const doneCount = 8;
+  return (
+    <div className="screen">
+      <div className="screen-header">
+        <div>
+          <div className="screen-title">Source Analysis</div>
+          <div className="screen-subtitle">Extracting and structuring knowledge from your sources</div>
+        </div>
+        <div style={{display:"flex",gap:"8px"}}>
+          <button className="btn" onClick={() => onNav("sources-add")}>← Back</button>
+          <button className="btn btn-primary" onClick={() => onNav("framework")}>Continue to Framework →</button>
+        </div>
+      </div>
+      <div className="screen-body">
+        <div className="two-col" style={{alignItems:"flex-start",gap:24}}>
+          {/* Left: pipeline */}
+          <div>
+            <div className="card" style={{marginBottom:16}}>
+              <div style={{fontWeight:700,marginBottom:14,fontSize:13}}>Generation Pipeline</div>
+              {ANALYSIS_STAGES.map((s, i) => (
+                <div key={i} className="stage-row">
+                  <div className={`stage-dot ${i < doneCount ? "done" : i === doneCount ? "active" : "waiting"}`}></div>
+                  <span style={{fontSize:"13px",color: i < doneCount ? "#333" : i===doneCount ? "#555" : "#bbb",fontWeight: i===doneCount?"600":"400"}}>
+                    {s}
+                  </span>
+                  {i < doneCount && <span style={{marginLeft:"auto",fontSize:"11px",color:"#999"}}>✓</span>}
+                  {i === doneCount && <span style={{marginLeft:"auto",fontSize:"11px",color:"#555"}}>running…</span>}
+                </div>
+              ))}
+            </div>
+            <div className="card">
+              <div style={{fontWeight:700,marginBottom:10,fontSize:13}}>Issues / Warnings</div>
+              <div style={{fontSize:"12px",color:"#888",fontStyle:"italic"}}>No issues detected. All sources validated.</div>
+            </div>
+          </div>
+
+          {/* Right: extracted concepts + source map */}
+          <div>
+            <div className="card" style={{marginBottom:16}}>
+              <div style={{fontWeight:700,marginBottom:12,fontSize:13}}>Extracted Concepts ({CONCEPTS.length})</div>
+              <div className="concept-grid">
+                {CONCEPTS.map((c, i) => (
+                  <span key={i} className="chip">{c}</span>
+                ))}
+              </div>
+            </div>
+            <div className="card">
+              <div style={{fontWeight:700,marginBottom:10,fontSize:13}}>Source Map Preview</div>
+              <div className="img-placeholder" style={{height:180}}>
+                [ source map diagram placeholder ]<br/>
+                <span style={{fontSize:"11px",marginTop:6,display:"block"}}>Concept clusters from 3 sources</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SCREEN 5: FRAMEWORK BUILDER ─── */
+function FrameworkBuilder({ onNav }) {
+  const [pillars, setPillars] = useState(PILLARS);
+  const [editing, setEditing] = useState(null);
+  const [editVal, setEditVal] = useState({});
+  const [fwName, setFwName] = useState("A.G.E.N.T.");
+  const [altIdx, setAltIdx] = useState(null);
+
+  function startEdit(i) {
+    setEditing(i);
+    setEditVal({ name: pillars[i].name, desc: pillars[i].desc });
+  }
+  function saveEdit(i) {
+    const updated = [...pillars];
+    updated[i] = { ...updated[i], ...editVal };
+    setPillars(updated);
+    setEditing(null);
+  }
+
+  return (
+    <div className="screen">
+      <div className="screen-header">
+        <div>
+          <div className="screen-title">Framework Builder</div>
+          <div className="screen-subtitle">Turn extracted knowledge into a teachable named framework</div>
+        </div>
+        <div style={{display:"flex",gap:"8px"}}>
+          <button className="btn" onClick={() => onNav("analysis")}>← Back</button>
+          <button className="btn btn-primary" onClick={() => onNav("outline")}>Use as Course Spine →</button>
+        </div>
+      </div>
+      <div className="screen-body">
+        <div className="two-col" style={{alignItems:"flex-start"}}>
+          {/* Framework display */}
+          <div>
+            <div className="card" style={{marginBottom:16}}>
+              <div style={{display:"flex",alignItems:"baseline",gap:12,marginBottom:16}}>
+                <div style={{fontSize:40,fontWeight:900,letterSpacing:"0.12em",fontFamily:"monospace"}}>{fwName}</div>
+                <button className="btn btn-sm" onClick={()=>setFwName(ALT_NAMES[Math.floor(Math.random()*ALT_NAMES.length)])}>Regenerate Name</button>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                {pillars.map((p, i) => (
+                  <div key={i} className="pillar-card">
+                    <div className="pillar-letter">{p.letter}</div>
+                    {editing === i ? (
+                      <div style={{flex:1}}>
+                        <input className="form-input" value={editVal.name} onChange={e=>setEditVal(v=>({...v,name:e.target.value}))} style={{marginBottom:6}} />
+                        <input className="form-input" value={editVal.desc} onChange={e=>setEditVal(v=>({...v,desc:e.target.value}))} style={{marginBottom:8}} />
+                        <div style={{display:"flex",gap:"6px"}}>
+                          <button className="btn btn-sm btn-primary" onClick={()=>saveEdit(i)}>Save</button>
+                          <button className="btn btn-sm" onClick={()=>setEditing(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{flex:1}}>
+                        <div style={{fontWeight:700,fontSize:"14px"}}>{p.name}</div>
+                        <div style={{fontSize:"13px",color:"#666",marginTop:3}}>{p.desc}</div>
+                      </div>
+                    )}
+                    {editing !== i && (
+                      <button className="btn btn-sm btn-ghost" onClick={()=>startEdit(i)}>Edit</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{display:"flex",gap:"8px"}}>
+              <button className="btn btn-sm">Regenerate Pillars</button>
+              <button className="btn btn-sm">Generate Visual Model</button>
+              <button className="btn btn-sm btn-primary" onClick={() => onNav("outline")}>Accept Framework</button>
+            </div>
+          </div>
+
+          {/* Alternates + visual placeholder */}
+          <div>
+            <div className="card" style={{marginBottom:16}}>
+              <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>Alternate Framework Names</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:"8px"}}>
+                {ALT_NAMES.map((n, i) => (
+                  <span key={i} className={`chip ${altIdx===i?"active":""}`} style={{cursor:"pointer",fontFamily:"monospace",fontWeight:700,fontSize:"13px"}} onClick={()=>{setAltIdx(i);setFwName(n)}}>{n}</span>
+                ))}
+              </div>
+            </div>
+            <div className="card">
+              <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>Visual Model Placeholder</div>
+              <div className="img-placeholder" style={{height:220}}>
+                [ Framework diagram placeholder ]<br/>
+                <span style={{fontSize:"11px",marginTop:6,display:"block"}}>Pentagon / hub-and-spoke / linear flow visual</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SCREEN 6: COURSE OUTLINE ─── */
+function CourseOutline({ onNav }) {
+  return (
+    <div className="screen">
+      <div className="screen-header">
+        <div>
+          <div className="screen-title">Course Outline Editor</div>
+          <div className="screen-subtitle">Agentic Systems Builder Playbook — review and reorder modules before finalizing lessons</div>
+        </div>
+        <div style={{display:"flex",gap:"8px"}}>
+          <button className="btn" onClick={() => onNav("framework")}>← Back</button>
+          <button className="btn">Regenerate Outline</button>
+          <button className="btn btn-primary" onClick={() => onNav("lesson")}>Approve & Continue →</button>
+        </div>
+      </div>
+      <div className="screen-body">
+        <div className="card" style={{marginBottom:16,padding:"12px 16px",background:"#f8f8f8",border:"1px solid #e0e0e0"}}>
+          <div style={{fontWeight:700,fontSize:14}}>Agentic Systems Builder Playbook</div>
+          <div style={{fontSize:"13px",color:"#666",marginTop:4}}>Design reliable AI agents using practical patterns for tools, memory, planning, reflection, guardrails, and evaluation.</div>
+          <div style={{display:"flex",gap:"16px",marginTop:8,fontSize:"12px",color:"#888"}}>
+            <span>9 modules</span>
+            <span>47 lessons</span>
+            <span>~3.5 hours total</span>
+          </div>
+        </div>
+
+        <table className="table">
+          <thead>
+            <tr>
+              <th style={{width:28}}></th>
+              <th style={{width:32}}>#</th>
+              <th>Module Title</th>
+              <th>Est. Time</th>
+              <th>Lessons</th>
+              <th>Artifacts</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {MODULES.map((m, i) => (
+              <tr key={m.id}>
+                <td><span className="drag-handle">⠿</span></td>
+                <td style={{color:"#aaa",fontSize:"12px"}}>{String(i+1).padStart(2,"0")}</td>
+                <td style={{fontWeight:500}}>{m.title}</td>
+                <td style={{color:"#888",fontSize:"12px"}}>{m.time}</td>
+                <td style={{color:"#444"}}>{m.lessons}</td>
+                <td style={{color:"#444"}}>{m.artifacts}</td>
+                <td><span className={`status-chip ${m.status==="ready"?"status-reviewing":"status-draft"}`}>{m.status}</span></td>
+                <td>
+                  <button className="btn btn-sm btn-ghost" onClick={() => onNav("module")}>Open →</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div style={{marginTop:12,display:"flex",gap:"8px"}}>
+          <button className="btn btn-sm">+ Add Module</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SCREEN 7: MICRO LESSON PLAYER ─── */
+function LessonPlayer({ onNav }) {
+  const [cardIdx, setCardIdx] = useState(0);
+  const [quizAnswer, setQuizAnswer] = useState(null);
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [sourceOpen, setSourceOpen] = useState(false);
+  const card = LESSON_CARDS[cardIdx];
+
+  function nextCard() {
+    if (cardIdx < LESSON_CARDS.length - 1) { setCardIdx(cardIdx + 1); setQuizAnswer(null); setQuizSubmitted(false); }
+  }
+  function prevCard() { if (cardIdx > 0) setCardIdx(cardIdx - 1); }
+
+  return (
+    <div className="screen">
+      <div className="screen-header">
+        <div>
+          <div style={{fontSize:"12px",color:"#888",marginBottom:4}}>Module 1 — Agents Are Systems, Not Prompts</div>
+          <div className="screen-title" style={{fontSize:16}}>Lesson 1: Agents Are Systems, Not Prompts</div>
+        </div>
+        <div style={{display:"flex",gap:"8px",alignItems:"center"}}>
+          <button className="btn btn-sm btn-ghost" onClick={() => onNav("outline")}>← Outline</button>
+          <button className="btn btn-sm btn-ghost" onClick={()=>setNoteOpen(!noteOpen)}>Notes</button>
+          <button className="btn btn-sm btn-ghost" onClick={()=>setSourceOpen(!sourceOpen)}>Sources</button>
+          <button className="btn btn-sm btn-primary" onClick={() => onNav("toolkit")}>Mark Complete ✓</button>
+        </div>
+      </div>
+      <div className="screen-body">
+        {/* Progress */}
+        <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:20}}>
+          {LESSON_CARDS.map((_, i) => (
+            <div key={i} onClick={()=>{setCardIdx(i);setQuizAnswer(null);setQuizSubmitted(false);}} style={{
+              flex:1,height:4,cursor:"pointer",borderRadius:2,
+              background: i < cardIdx ? "#333" : i===cardIdx ? "#888" : "#ddd"
+            }}></div>
+          ))}
+          <span style={{fontSize:"12px",color:"#888",flexShrink:0}}>{cardIdx+1}/{LESSON_CARDS.length}</span>
+        </div>
+
+        <div className="lesson-card-wrap">
+          <div className="lesson-card">
+            <div className="lesson-card-label">{card.label}</div>
+            <div className="lesson-card-title">{card.title}</div>
+
+            {card.type === "text" && (
+              <div className="lesson-card-body">{card.body}</div>
+            )}
+            {card.type === "image" && (
+              <div className="img-placeholder" style={{height:160}}>
+                [ {card.placeholder} ]
+              </div>
+            )}
+            {card.type === "mistake" && (
+              <div style={{background:"#f0f0f0",border:"1.5px solid #bbb",borderRadius:3,padding:"14px 16px"}}>
+                <div style={{fontSize:"11px",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:"#888",marginBottom:8}}>⚠ Watch out</div>
+                <div style={{fontSize:"14px",lineHeight:1.6}}>{card.body}</div>
+              </div>
+            )}
+            {card.type === "quiz" && (
+              <div>
+                {card.options.map(opt => (
+                  <div
+                    key={opt.key}
+                    className={`quiz-option ${quizAnswer===opt.key && !quizSubmitted ? "selected" : ""} ${quizSubmitted && opt.key===card.correct ? "correct" : ""}`}
+                    onClick={()=>!quizSubmitted && setQuizAnswer(opt.key)}
+                  >
+                    <div className="quiz-option-key">{opt.key}</div>
+                    <span>{opt.text}</span>
+                  </div>
+                ))}
+                <div style={{display:"flex",gap:"8px",marginTop:12}}>
+                  <button className="btn btn-sm btn-primary" onClick={()=>quizAnswer&&setQuizSubmitted(true)} style={{opacity:quizAnswer?1:0.4}}>Check Answer</button>
+                  {quizSubmitted && (
+                    <span style={{fontSize:"13px",color:"#333",display:"flex",alignItems:"center",gap:6}}>
+                      {quizAnswer===card.correct ? "✓ Correct! C is right." : `✗ Try again. (You selected ${quizAnswer})`}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+            {card.type === "apply" && (
+              <div>
+                <div className="lesson-card-body" style={{marginBottom:14}}>{card.body}</div>
+                <textarea className="form-textarea" placeholder="Write your answer here…" style={{minHeight:80}}></textarea>
+              </div>
+            )}
+            {card.type === "source" && (
+              <div style={{background:"#f8f8f8",border:"1px solid #e0e0e0",borderRadius:3,padding:"12px 14px"}}>
+                <div style={{fontSize:"12px",fontFamily:"monospace",lineHeight:1.8,color:"#555",whiteSpace:"pre-line"}}>{card.body}</div>
+              </div>
+            )}
+          </div>
+
+          <div className="lesson-nav">
+            <button className="btn" onClick={prevCard} style={{opacity:cardIdx===0?0.3:1}}>← Back</button>
+            <span style={{fontSize:"12px",color:"#888"}}>{cardIdx+1} of {LESSON_CARDS.length} cards</span>
+            <button className="btn btn-primary" onClick={nextCard} style={{opacity:cardIdx===LESSON_CARDS.length-1?0.4:1}}>
+              {cardIdx===LESSON_CARDS.length-1 ? "Lesson complete" : "Next →"}
+            </button>
+          </div>
+
+          {/* Notes drawer */}
+          {noteOpen && (
+            <div className="card" style={{marginTop:16}}>
+              <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>My Notes</div>
+              <textarea className="form-textarea" placeholder="Type notes for this card…" style={{minHeight:80}}></textarea>
+            </div>
+          )}
+          {/* Source drawer */}
+          {sourceOpen && (
+            <div className="card" style={{marginTop:16}}>
+              <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>Source References</div>
+              <div className="source-row">
+                <div className="source-icon">PD</div>
+                <div>
+                  <div style={{fontSize:"13px",fontWeight:600}}>Agentic Design Patterns PDF</div>
+                  <div style={{fontSize:"11px",color:"#888"}}>Section 2 — System Design Foundations, p.34–41</div>
+                </div>
+              </div>
+              <div className="source-row" style={{marginTop:6}}>
+                <div className="source-icon">GH</div>
+                <div>
+                  <div style={{fontSize:"13px",fontWeight:600}}>Agentic Patterns Notebooks</div>
+                  <div style={{fontSize:"11px",color:"#888"}}>notebook_02_system_design.ipynb</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SCREEN 8: TOOLKIT ─── */
+function Toolkit({ onNav }) {
+  const [selected, setSelected] = useState("Agentic System Design Spec");
+  const specSections = [
+    "Agent Purpose","User / Workflow","Autonomy Level","Pattern Selection",
+    "Tools Required","Context / Memory Policy","Failure Modes","Guardrails",
+    "Evaluation Plan","Human Escalation Rules","Cost / Latency Constraints","Launch Readiness"
+  ];
+  return (
+    <div className="screen">
+      <div className="screen-header">
+        <div>
+          <div className="screen-title">Toolkit / Artifacts</div>
+          <div className="screen-subtitle">Practical generated assets from the Agentic Systems Builder Playbook</div>
+        </div>
+        <div style={{display:"flex",gap:"8px"}}>
+          <button className="btn" onClick={() => onNav("lesson")}>← Back</button>
+          <button className="btn btn-primary" onClick={() => onNav("publish")}>Continue to Publish →</button>
+        </div>
+      </div>
+      <div className="screen-body" style={{padding:0}}>
+        <div style={{display:"grid",gridTemplateColumns:"260px 1fr",height:"calc(100vh - 70px)"}}>
+          {/* Artifact list */}
+          <div style={{borderRight:"1px solid #ddd",background:"#fff",overflowY:"auto"}}>
+            <div style={{padding:"12px 16px",fontWeight:700,fontSize:12,color:"#888",textTransform:"uppercase",letterSpacing:"0.06em",borderBottom:"1px solid #eee"}}>Artifacts ({ARTIFACTS.length})</div>
+            {ARTIFACTS.map((a, i) => (
+              <div key={i} className={`artifact-row ${selected===a?"active":""}`} onClick={()=>setSelected(a)}>
+                <span style={{fontSize:"13px",fontWeight:selected===a?600:400}}>{a}</span>
+                <span style={{fontSize:"11px",color:"#bbb"}}>→</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Detail panel */}
+          <div style={{padding:"24px 28px",overflowY:"auto"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
+              <div style={{fontWeight:700,fontSize:18}}>{selected}</div>
+              <div style={{display:"flex",gap:"8px"}}>
+                <button className="btn btn-sm">Edit</button>
+                <button className="btn btn-sm">Duplicate</button>
+                <button className="btn btn-sm">Export</button>
+                <button className="btn btn-sm">Link to Module</button>
+              </div>
+            </div>
+
+            {selected === "Agentic System Design Spec" ? (
+              <div>
+                <div className="annotation" style={{marginBottom:16}}>Template — fill in one per agent you design</div>
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {specSections.map((s, i) => (
+                    <div key={i} style={{border:"1px solid #e0e0e0",borderRadius:3,padding:"10px 14px",background:"#fafafa"}}>
+                      <div style={{fontSize:"11px",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:"#888",marginBottom:6}}>{String(i+1).padStart(2,"0")} — {s}</div>
+                      <div className="img-placeholder" style={{height:36,fontSize:"11px",fontStyle:"normal",fontFamily:"monospace",color:"#bbb",letterSpacing:"0.02em",borderStyle:"dashed"}}>
+                        [ fill in for your agent ]
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="annotation" style={{marginBottom:16}}>Select this artifact to view its template</div>
+                <div className="img-placeholder" style={{height:220}}>
+                  [ {selected} template preview ]
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SCREEN 9: PUBLISH ─── */
+function Publish({ onNav }) {
+  const [pubStatus, setPubStatus] = useState("private");
+  const outputs = [
+    { id: "microsite", label: "Public Microsite", sub: "Hosted on Vercel or custom domain" },
+    { id: "pdf", label: "PDF Workbook", sub: "Print-ready formatted export" },
+    { id: "markdown", label: "Markdown Export", sub: "Folder of .md files + assets" },
+    { id: "newsletter", label: "Newsletter Sequence", sub: "7-part email drip" },
+    { id: "deck", label: "Workshop Deck", sub: "Slide deck for live delivery" },
+    { id: "notion", label: "Notion / Google Doc Export", sub: "Editable document export" },
+    { id: "leadmag", label: "Lead Magnet Landing Page", sub: "Single-page conversion asset" },
+  ];
+  const [selOutput, setSelOutput] = useState("microsite");
+  const checkItems = [
+    { label: "All modules reviewed and approved", done: true },
+    { label: "Framework finalized", done: true },
+    { label: "All lessons generated", done: true },
+    { label: "Quizzes reviewed", done: false },
+    { label: "Artifacts ready for export", done: true },
+    { label: "Cover / title page configured", done: false },
+    { label: "SEO metadata set", done: false },
+  ];
+  return (
+    <div className="screen">
+      <div className="screen-header">
+        <div>
+          <div className="screen-title">Publish / Export</div>
+          <div className="screen-subtitle">Turn your playbook into a public or reusable asset</div>
+        </div>
+        <div style={{display:"flex",gap:"8px",alignItems:"center"}}>
+          <button className="btn" onClick={() => onNav("toolkit")}>← Back</button>
+          <button className="btn" onClick={()=>onNav("microsite")}>Preview Site →</button>
+          <button className="btn">Export Bundle</button>
+          <button className="btn btn-primary">Publish to Vercel →</button>
+        </div>
+      </div>
+      <div className="screen-body">
+        {/* Title banner */}
+        <div className="card" style={{marginBottom:20,background:"#f8f8f8",border:"1px solid #e0e0e0"}}>
+          <div style={{fontWeight:700,fontSize:16}}>Agentic Systems Builder Playbook</div>
+          <div style={{fontSize:"13px",color:"#666",marginTop:4}}>A practical microcourse for designing reliable AI agents from first principles.</div>
+          <div style={{display:"flex",gap:"8px",marginTop:12,alignItems:"center"}}>
+            <span style={{fontSize:"12px",fontWeight:700,color:"#555"}}>Visibility:</span>
+            {["private","link","published"].map(s => (
+              <span key={s} className={`chip ${pubStatus===s?"active":""}`} style={{cursor:"pointer"}} onClick={()=>setPubStatus(s)}>
+                {s==="private"?"Private":s==="link"?"Share Link":"Published"}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="two-col" style={{alignItems:"flex-start",gap:24}}>
+          {/* Output types */}
+          <div>
+            <div className="form-label" style={{marginBottom:10}}>Publishing Outputs</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}}>
+              {outputs.map(o => (
+                <div key={o.id} className={`output-card ${selOutput===o.id?"active":""}`} onClick={()=>setSelOutput(o.id)}>
+                  <div className="output-card-label">{o.label}</div>
+                  <div className="output-card-sub">{o.sub}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="card" style={{marginTop:16}}>
+              <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>
+                {selOutput === "microsite" ? "Microsite Preview" : `${outputs.find(o=>o.id===selOutput)?.label} Preview`}
+              </div>
+              <div className="img-placeholder" style={{height:160}}>
+                [ {outputs.find(o=>o.id===selOutput)?.label} preview placeholder ]
+              </div>
+              <div style={{display:"flex",gap:"8px",marginTop:12}}>
+                <button className="btn btn-sm">Generate Landing Page</button>
+                <button className="btn btn-sm btn-primary">Export →</button>
+              </div>
+            </div>
+          </div>
+
+          {/* Pre-publish checklist */}
+          <div>
+            <div className="form-label" style={{marginBottom:10}}>Pre-Publish Checklist</div>
+            <div className="card">
+              {checkItems.map((c, i) => (
+                <div key={i} className="check-item">
+                  <div className={`check-box ${c.done?"done":""}`}>{c.done?"✓":""}</div>
+                  <span style={{fontSize:"13px",color:c.done?"#333":"#888"}}>{c.label}</span>
+                </div>
+              ))}
+              <div style={{marginTop:14,fontSize:"12px",color:"#888"}}>4 of 7 items complete — resolve before publishing</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── PLACEHOLDER SCREENS ─── */
+function PlaceholderScreen({ title, onNav }) {
+  return (
+    <div className="screen">
+      <div className="screen-header">
+        <div className="screen-title">{title}</div>
+      </div>
+      <div className="screen-body">
+        <div className="img-placeholder" style={{height:300}}>[ {title} screen — not yet wireframed in this prototype ]</div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SCREEN 10: EMPTY LIBRARY (FIRST RUN) ─── */
+function EmptyLibrary({ onNav }) {
+  const templates = [
+    { name: "AI / LLM topic", desc: "Research papers, docs, code repos" },
+    { name: "Product / strategy", desc: "PDFs, articles, frameworks" },
+    { name: "Engineering topic", desc: "Docs sites, GitHub, blog posts" },
+    { name: "Research synthesis", desc: "Multiple papers, notes, talks" },
+    { name: "Workshop or course", desc: "Slides, transcripts, examples" },
+    { name: "Start blank", desc: "No template" },
+  ];
+  return (
+    <div className="screen">
+      <div className="screen-header">
+        <div>
+          <div className="screen-title">Welcome to PlaybookOS</div>
+          <div className="screen-subtitle">Turn any source material into a structured microlearning playbook</div>
+        </div>
+      </div>
+      <div className="screen-body">
+        <div style={{maxWidth:780,margin:"0 auto",textAlign:"center",padding:"30px 0 20px"}}>
+          <div className="img-placeholder" style={{height:140,marginBottom:24,borderStyle:"dashed"}}>
+            [ illustration placeholder — empty bookshelf / blank slate ]
+          </div>
+          <div style={{fontSize:22,fontWeight:700,marginBottom:8}}>Your first playbook starts here.</div>
+          <div style={{fontSize:14,color:"#666",lineHeight:1.6,maxWidth:520,margin:"0 auto 24px"}}>
+            Bring 1–4 sources (PDFs, GitHub repos, articles, YouTube, docs). PlaybookOS extracts the ideas, builds a named framework, and structures everything into bite-sized lessons.
+          </div>
+          <button className="btn btn-primary" style={{padding:"10px 22px",fontSize:14}} onClick={()=>onNav("create")}>+ Create Your First Playbook</button>
+          <div style={{marginTop:8,fontSize:12,color:"#999"}}>or pick a starting template below</div>
+        </div>
+
+        <div style={{maxWidth:780,margin:"0 auto"}}>
+          <div className="form-label" style={{marginBottom:10}}>Quick Start Templates</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"10px"}}>
+            {templates.map((t,i)=>(
+              <div key={i} className="output-card" onClick={()=>onNav("create")}>
+                <div className="output-card-label">{t.name}</div>
+                <div className="output-card-sub">{t.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{marginTop:30,padding:"16px 20px",background:"#fff",border:"1px solid #e0e0e0",borderRadius:3}}>
+            <div style={{fontSize:13,fontWeight:700,marginBottom:10}}>How it works</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:14}}>
+              {[
+                {n:"1",t:"Add sources",d:"PDFs, repos, URLs"},
+                {n:"2",t:"Auto-analyze",d:"Concepts + framework"},
+                {n:"3",t:"Review outline",d:"Edit modules + lessons"},
+                {n:"4",t:"Publish",d:"Microsite, PDF, more"},
+              ].map((s,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8}}>
+                  <div style={{width:22,height:22,border:"1.5px solid #999",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{s.n}</div>
+                  <div>
+                    <div style={{fontSize:12,fontWeight:600}}>{s.t}</div>
+                    <div style={{fontSize:11,color:"#888",marginTop:2}}>{s.d}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SCREEN 11: SOURCES HUB ─── */
+function SourcesHub({ onNav }) {
+  const sources = [
+    { type:"PDF", name:"Agentic Design Patterns PDF", playbooks:3, size:"48 pages", date:"Apr 14" },
+    { type:"GitHub", name:"agentic-patterns notebooks", playbooks:2, size:"12 nb", date:"Apr 14" },
+    { type:"YouTube", name:"Building Agents — Anthropic Talk", playbooks:1, size:"42 min", date:"Apr 22" },
+    { type:"Article", name:"Building effective agents (Anthropic)", playbooks:2, size:"web", date:"Apr 02" },
+    { type:"Docs", name:"Anthropic Claude SDK docs", playbooks:1, size:"site", date:"Apr 18" },
+    { type:"PDF", name:"LLM Evaluation Best Practices", playbooks:1, size:"22 pages", date:"Apr 26" },
+    { type:"Markdown", name:"Personal notes on AI agents", playbooks:0, size:"18 files", date:"Apr 28" },
+  ];
+  return (
+    <div className="screen">
+      <div className="screen-header">
+        <div>
+          <div className="screen-title">Sources</div>
+          <div className="screen-subtitle">Reusable across playbooks — add once, reference anywhere</div>
+        </div>
+        <button className="btn btn-primary">+ Add Source</button>
+      </div>
+      <div className="screen-body">
+        <div style={{display:"flex",gap:"12px",marginBottom:18,alignItems:"center"}}>
+          <input className="form-input" style={{maxWidth:260}} placeholder="Search sources…" readOnly />
+          <div style={{display:"flex",gap:"6px"}}>
+            <span className="chip active">All</span>
+            <span className="chip">PDF</span>
+            <span className="chip">GitHub</span>
+            <span className="chip">YouTube</span>
+            <span className="chip">Articles</span>
+          </div>
+          <span style={{marginLeft:"auto",fontSize:12,color:"#888"}}>{sources.length} sources</span>
+        </div>
+        <table className="table">
+          <thead>
+            <tr>
+              <th style={{width:60}}>Type</th>
+              <th>Source</th>
+              <th>Used in</th>
+              <th>Size</th>
+              <th>Added</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {sources.map((s,i)=>(
+              <tr key={i}>
+                <td><div className="source-icon">{s.type.slice(0,2).toUpperCase()}</div></td>
+                <td><span className="link">{s.name}</span></td>
+                <td>{s.playbooks > 0 ? <span style={{color:"#444"}}>{s.playbooks} playbook{s.playbooks>1?"s":""}</span> : <span style={{color:"#bbb",fontStyle:"italic"}}>unused</span>}</td>
+                <td style={{color:"#888",fontSize:12}}>{s.size}</td>
+                <td style={{color:"#888",fontSize:12}}>{s.date}</td>
+                <td>
+                  <button className="btn btn-sm btn-ghost">Re-extract</button>
+                  <button className="btn btn-sm btn-ghost">View</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SCREEN 12: FRAMEWORKS LIBRARY ─── */
+function FrameworksLibrary({ onNav }) {
+  const fws = [
+    { name:"A.G.E.N.T.", playbook:"Agentic Systems Builder Playbook", pillars:5, used:"Course spine" },
+    { name:"P.A.T.H.", playbook:"AI Product Builder Playbook", pillars:4, used:"Course spine" },
+    { name:"S.P.R.I.N.T.", playbook:"Product Strategy Sprint Playbook", pillars:6, used:"Course spine" },
+    { name:"L.O.O.P.", playbook:"Customer Discovery Playbook", pillars:4, used:"Lesson cluster" },
+    { name:"E.V.A.L.", playbook:"LLM Evaluation Playbook", pillars:4, used:"Course spine" },
+  ];
+  return (
+    <div className="screen">
+      <div className="screen-header">
+        <div>
+          <div className="screen-title">Frameworks</div>
+          <div className="screen-subtitle">Named frameworks generated from your playbooks</div>
+        </div>
+        <button className="btn btn-primary">+ Generate Framework</button>
+      </div>
+      <div className="screen-body">
+        <div className="three-col">
+          {fws.map((f,i)=>(
+            <div key={i} className="card" style={{cursor:"pointer"}} onClick={()=>onNav("framework")}>
+              <div style={{fontFamily:"monospace",fontWeight:900,fontSize:24,letterSpacing:"0.1em",marginBottom:10}}>{f.name}</div>
+              <div style={{fontSize:13,color:"#444",fontWeight:600,marginBottom:6}}>{f.playbook}</div>
+              <div style={{fontSize:12,color:"#888"}}>{f.pillars} pillars · {f.used}</div>
+              <div style={{display:"flex",gap:6,marginTop:14}}>
+                <button className="btn btn-sm">Open</button>
+                <button className="btn btn-sm btn-ghost">Reuse →</button>
+              </div>
+            </div>
+          ))}
+          <div className="card" style={{cursor:"pointer",borderStyle:"dashed",background:"transparent",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:160,color:"#999"}}>
+            <div style={{fontSize:26,fontWeight:300,marginBottom:6}}>+</div>
+            <div style={{fontSize:13}}>Generate new framework</div>
+            <div style={{fontSize:11,color:"#bbb",marginTop:4}}>From sources or scratch</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SCREEN 13: MODULE DETAIL ─── */
+function ModuleDetail({ onNav }) {
+  const lessons = [
+    { num:"1.1", title:"Agents Are Systems, Not Prompts", time:"5 min", type:"Concept", status:"ready" },
+    { num:"1.2", title:"The Agent Loop: Perceive → Plan → Act → Reflect", time:"4 min", type:"Concept", status:"ready" },
+    { num:"1.3", title:"What an Agent Actually Owns", time:"5 min", type:"Concept", status:"ready" },
+    { num:"1.4", title:"Common Mistakes Building Agents", time:"4 min", type:"Mistakes", status:"ready" },
+    { num:"1.5", title:"Quick Check: Are These Agents?", time:"4 min", type:"Quiz", status:"draft" },
+  ];
+  const artifacts = [
+    { name:"Agent Brief Builder", type:"Template", state:"Generated" },
+    { name:"Agent vs Workflow Decision Tree", type:"Worksheet", state:"Generated" },
+  ];
+  return (
+    <div className="screen">
+      <div className="screen-header">
+        <div>
+          <div style={{fontSize:12,color:"#888",marginBottom:4}}>
+            <span className="breadcrumb-link" onClick={()=>onNav("outline")}>Agentic Systems Builder Playbook</span> › Module 1
+          </div>
+          <div className="screen-title">Agents Are Systems, Not Prompts</div>
+          <div className="screen-subtitle">Module 1 of 9 · 5 lessons · 22 min · 2 artifacts</div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button className="btn" onClick={()=>onNav("outline")}>← Outline</button>
+          <button className="btn">Regenerate Module</button>
+          <button className="btn btn-primary" onClick={()=>onNav("lesson")}>Start Module →</button>
+        </div>
+      </div>
+      <div className="screen-body">
+        <div className="two-col" style={{alignItems:"flex-start",gap:24}}>
+          <div>
+            <div className="card" style={{marginBottom:16}}>
+              <div className="form-label" style={{marginBottom:8}}>Module Goal</div>
+              <div style={{fontSize:14,lineHeight:1.6,color:"#333"}}>
+                Help the learner shift from prompt-thinking to system-thinking. By the end, they can describe what an agent owns beyond the LLM call: goals, context, tools, state, recovery, and evaluation.
+              </div>
+            </div>
+            <div className="form-label" style={{marginBottom:10,marginTop:20}}>Lessons in this module</div>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th style={{width:28}}></th>
+                  <th style={{width:50}}>#</th>
+                  <th>Lesson</th>
+                  <th>Type</th>
+                  <th>Time</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {lessons.map((l,i)=>(
+                  <tr key={i}>
+                    <td><span className="drag-handle">⠿</span></td>
+                    <td style={{color:"#aaa",fontSize:12}}>{l.num}</td>
+                    <td style={{fontWeight:500}}>{l.title}</td>
+                    <td><span className="chip" style={{fontSize:11,padding:"2px 6px"}}>{l.type}</span></td>
+                    <td style={{color:"#888",fontSize:12}}>{l.time}</td>
+                    <td><span className={`status-chip ${l.status==="ready"?"status-reviewing":"status-draft"}`}>{l.status}</span></td>
+                    <td><button className="btn btn-sm btn-ghost" onClick={()=>onNav("lesson")}>Edit →</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{marginTop:10}}>
+              <button className="btn btn-sm">+ Add Lesson</button>
+            </div>
+          </div>
+
+          <div>
+            <div className="card" style={{marginBottom:16}}>
+              <div className="form-label" style={{marginBottom:8}}>Linked Framework Pillar</div>
+              <div className="pillar-card" style={{margin:0}}>
+                <div className="pillar-letter">A</div>
+                <div>
+                  <div style={{fontWeight:700,fontSize:14}}>Aim</div>
+                  <div style={{fontSize:12,color:"#666",marginTop:3}}>Define outcomes, users, boundaries, and autonomy level</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="card" style={{marginBottom:16}}>
+              <div className="form-label" style={{marginBottom:8}}>Artifacts</div>
+              {artifacts.map((a,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:i<artifacts.length-1?"1px solid #eee":"none"}}>
+                  <div className="source-icon">{a.type.slice(0,2).toUpperCase()}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,fontWeight:600}}>{a.name}</div>
+                    <div style={{fontSize:11,color:"#888",marginTop:2}}>{a.type} · {a.state}</div>
+                  </div>
+                  <button className="btn btn-sm btn-ghost" onClick={()=>onNav("toolkit")}>Open →</button>
+                </div>
+              ))}
+            </div>
+
+            <div className="card">
+              <div className="form-label" style={{marginBottom:8}}>Source Citations</div>
+              <div style={{fontSize:12,color:"#666",lineHeight:1.7}}>
+                <div>Agentic Design Patterns PDF — §2 (p.34–41)</div>
+                <div>Building effective agents (article)</div>
+                <div>agentic-patterns repo — notebook 02</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SCREEN 14: LEARNER MICROSITE ─── */
+function LearnerMicrosite({ onNav }) {
+  const modules = [
+    { n:"01", title:"Agents Are Systems, Not Prompts", lessons:5, time:"22 min" },
+    { n:"02", title:"Goals, Boundaries, and Autonomy", lessons:4, time:"18 min" },
+    { n:"03", title:"The Agentic Design Stack", lessons:6, time:"25 min" },
+    { n:"04", title:"Choosing the Right Pattern", lessons:5, time:"20 min" },
+    { n:"05", title:"Tool Use and MCP", lessons:7, time:"28 min" },
+    { n:"06", title:"Memory, State, and Context", lessons:5, time:"22 min" },
+    { n:"07", title:"Planning, Reflection, and Recovery", lessons:6, time:"24 min" },
+    { n:"08", title:"Guardrails, Evals, and Human Control", lessons:6, time:"26 min" },
+    { n:"09", title:"Production Readiness", lessons:4, time:"20 min" },
+  ];
+  return (
+    <div className="screen" style={{background:"#fafafa"}}>
+      {/* preview chrome */}
+      <div style={{background:"#222",color:"#bbb",padding:"6px 16px",fontSize:11,display:"flex",alignItems:"center",gap:10}}>
+        <span style={{display:"flex",gap:5}}>
+          <span style={{width:10,height:10,borderRadius:"50%",background:"#444"}}></span>
+          <span style={{width:10,height:10,borderRadius:"50%",background:"#444"}}></span>
+          <span style={{width:10,height:10,borderRadius:"50%",background:"#444"}}></span>
+        </span>
+        <span>agentic-systems-builder.playbookos.app</span>
+        <span style={{marginLeft:"auto",fontSize:10,color:"#666"}}>Learner-facing preview</span>
+        <button className="btn btn-sm btn-ghost" style={{color:"#bbb",borderColor:"transparent",padding:"2px 8px"}} onClick={()=>onNav("publish")}>← Back to Publish</button>
+      </div>
+
+      {/* Hero */}
+      <div style={{padding:"60px 40px 40px",background:"#fff",borderBottom:"1px solid #e0e0e0",textAlign:"center"}}>
+        <div style={{fontSize:11,color:"#888",letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:14}}>A PlaybookOS Microcourse</div>
+        <div style={{fontSize:36,fontWeight:800,lineHeight:1.15,letterSpacing:"-0.02em",maxWidth:680,margin:"0 auto 16px"}}>Agentic Systems Builder Playbook</div>
+        <div style={{fontSize:16,color:"#555",lineHeight:1.5,maxWidth:580,margin:"0 auto 28px"}}>A practical microcourse for designing reliable AI agents from first principles — 9 modules, 47 lessons, ~3.5 hours.</div>
+        <div style={{display:"flex",gap:10,justifyContent:"center",marginBottom:22}}>
+          <button className="btn btn-primary" style={{padding:"10px 22px",fontSize:14}} onClick={()=>onNav("lesson")}>Start the Course →</button>
+          <button className="btn" style={{padding:"10px 22px",fontSize:14}}>Download PDF</button>
+        </div>
+        <div style={{display:"flex",gap:30,justifyContent:"center",fontSize:12,color:"#888"}}>
+          <span>9 modules</span><span>47 lessons</span><span>3.5 hours</span><span>Free</span>
+        </div>
+      </div>
+
+      {/* Framework section */}
+      <div style={{padding:"50px 40px",borderBottom:"1px solid #e0e0e0",textAlign:"center"}}>
+        <div style={{fontSize:11,color:"#888",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:14}}>The Framework</div>
+        <div style={{fontFamily:"monospace",fontWeight:900,fontSize:48,letterSpacing:"0.12em",marginBottom:18}}>A.G.E.N.T.</div>
+        <div style={{maxWidth:820,margin:"0 auto",display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12}}>
+          {PILLARS.map((p,i)=>(
+            <div key={i} style={{padding:"14px 10px",border:"1.5px solid #ccc",borderRadius:3,background:"#fff"}}>
+              <div style={{fontSize:22,fontWeight:900,marginBottom:6}}>{p.letter}</div>
+              <div style={{fontSize:13,fontWeight:700,marginBottom:4}}>{p.name}</div>
+              <div style={{fontSize:11,color:"#777",lineHeight:1.5}}>{p.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Module list */}
+      <div style={{padding:"50px 40px",maxWidth:820,margin:"0 auto"}}>
+        <div style={{fontSize:11,color:"#888",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:14}}>Curriculum</div>
+        <div style={{fontSize:24,fontWeight:700,marginBottom:24}}>9 modules to build reliable agents</div>
+        <div style={{display:"flex",flexDirection:"column",gap:0}}>
+          {modules.map((m,i)=>(
+            <div key={i} onClick={()=>onNav("lesson")} style={{padding:"18px 0",borderBottom:"1px solid #e0e0e0",display:"flex",alignItems:"center",gap:18,cursor:"pointer"}}>
+              <div style={{fontFamily:"monospace",fontSize:14,color:"#aaa",width:28}}>{m.n}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:16,fontWeight:600}}>{m.title}</div>
+                <div style={{fontSize:12,color:"#888",marginTop:3}}>{m.lessons} lessons · {m.time}</div>
+              </div>
+              <div style={{fontSize:14,color:"#bbb"}}>→</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer CTA */}
+      <div style={{padding:"50px 40px",background:"#222",color:"#fff",textAlign:"center"}}>
+        <div style={{fontSize:22,fontWeight:700,marginBottom:10}}>Ready to start building?</div>
+        <div style={{fontSize:14,color:"#aaa",marginBottom:22}}>Free, self-paced, no signup required.</div>
+        <button className="btn btn-primary" style={{padding:"10px 22px",fontSize:14,background:"#fff",color:"#222",borderColor:"#fff"}} onClick={()=>onNav("lesson")}>Start Module 1 →</button>
+        <div style={{marginTop:30,fontSize:11,color:"#666"}}>Built with PlaybookOS</div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── WORKFLOW STEPPER ─── */
+const WORKFLOW_STEPS = [
+  { id: "library", label: "Library" },
+  { id: "create", label: "New Playbook" },
+  { id: "sources-add", label: "Sources" },
+  { id: "analysis", label: "Analysis" },
+  { id: "framework", label: "Framework" },
+  { id: "outline", label: "Outline" },
+  { id: "module", label: "Module" },
+  { id: "lesson", label: "Lessons" },
+  { id: "toolkit", label: "Toolkit" },
+  { id: "publish", label: "Publish" },
+  { id: "microsite", label: "Live Site" },
+];
+
+function WorkflowBar({ screen, onNav }) {
+  const idx = WORKFLOW_STEPS.findIndex(s => s.id === screen);
+  if (idx < 0) return null;
+  return (
+    <div style={{background:"#fff",borderBottom:"1px solid #e0e0e0",padding:"6px 20px",display:"flex",alignItems:"center",gap:0,overflowX:"auto"}}>
+      {WORKFLOW_STEPS.map((s, i) => (
+        <React.Fragment key={s.id}>
+          <span
+            onClick={()=>onNav(s.id)}
+            style={{
+              fontSize:"11px",fontWeight: i===idx?700:500,
+              color: i < idx ? "#555" : i===idx ? "#111" : "#aaa",
+              cursor:"pointer",whiteSpace:"nowrap",padding:"3px 2px",
+              textDecoration: i < idx ? "underline" : "none",
+              textUnderlineOffset:"2px"
+            }}
+          >{i+1}. {s.label}</span>
+          {i < WORKFLOW_STEPS.length - 1 && <span style={{margin:"0 8px",color:"#ddd",fontSize:"11px"}}>›</span>}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+/* ─── APP ─── */
+function App() {
+  const [screen, setScreen] = useState("library");
+
+  const navMap = {
+    "library": "library",
+    "create": "playbooks",
+    "sources": "sources-hub",
+    "sources-add": "sources",
+    "analysis": "playbooks",
+    "framework": "frameworks",
+    "frameworks": "frameworks",
+    "outline": "playbooks",
+    "module": "playbooks",
+    "lesson": "playbooks",
+    "toolkit": "toolkit",
+    "publish": "publish",
+    "microsite": "microsite",
+    "empty": "empty",
+    "settings": "settings",
+  };
+
+  const activeNav = navMap[screen] || screen;
+
+  function handleNav(id) {
+    setScreen(id);
+  }
+
+  function handleOpen(playbook) {
+    setScreen("outline");
+  }
+
+  const workflowScreens = WORKFLOW_STEPS.map(s => s.id);
+  const showWorkflow = workflowScreens.includes(screen);
+
+  return (
+    <div className="app">
+      <Sidebar active={activeNav} onNav={(id) => {
+        if (id === "library") setScreen("library");
+        else if (id === "sources") setScreen("sources");
+        else if (id === "frameworks") setScreen("frameworks");
+        else if (id === "toolkit") setScreen("toolkit");
+        else if (id === "publish") setScreen("publish");
+        else if (id === "microsite") setScreen("microsite");
+        else if (id === "empty") setScreen("empty");
+        else if (id === "settings") setScreen("settings");
+        else if (id === "playbooks") setScreen("outline");
+        else setScreen(id);
+      }} />
+      <div style={{display:"flex",flexDirection:"column",flex:1,overflow:"hidden"}}>
+        {showWorkflow && <WorkflowBar screen={screen} onNav={handleNav} />}
+        <div className="main">
+          {screen === "library" && <Dashboard onNav={handleNav} onOpen={handleOpen} />}
+          {screen === "create" && <CreatePlaybook onNav={handleNav} />}
+          {screen === "sources" && <SourcesHub onNav={handleNav} />}
+          {screen === "sources-add" && <AddSources onNav={handleNav} />}
+          {screen === "analysis" && <SourceAnalysis onNav={handleNav} />}
+          {screen === "framework" && <FrameworkBuilder onNav={handleNav} />}
+          {screen === "frameworks" && <FrameworksLibrary onNav={handleNav} />}
+          {screen === "outline" && <CourseOutline onNav={handleNav} />}
+          {screen === "module" && <ModuleDetail onNav={handleNav} />}
+          {screen === "lesson" && <LessonPlayer onNav={handleNav} />}
+          {screen === "toolkit" && <Toolkit onNav={handleNav} />}
+          {screen === "publish" && <Publish onNav={handleNav} />}
+          {screen === "microsite" && <LearnerMicrosite onNav={handleNav} />}
+          {screen === "empty" && <EmptyLibrary onNav={handleNav} />}
+          {screen === "settings" && <PlaceholderScreen title="Settings" onNav={handleNav} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

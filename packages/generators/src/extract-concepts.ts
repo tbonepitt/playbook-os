@@ -1,9 +1,6 @@
 import type { Concept } from '@playbook-os/core'
-import { cachedMessages } from './client'
+import { generate } from './client'
 
-const MODEL = 'claude-sonnet-4-6'
-
-/** Strip markdown code fences that Claude sometimes wraps JSON in. */
 function stripCodeFences(raw: string): string {
   return raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
 }
@@ -12,14 +9,7 @@ function newId(): string {
   return Math.random().toString(36).slice(2, 10)
 }
 
-/**
- * Extract 10–25 key concepts from raw source text.
- * Returns a `Concept[]` ready to attach to an ExtractedSource.
- */
-export async function extractConcepts(
-  rawText: string,
-  sourceId: string,
-): Promise<Concept[]> {
+export async function extractConcepts(rawText: string, sourceId: string): Promise<Concept[]> {
   const systemPrompt = `You are a knowledge-extraction specialist. Your job is to read a source text and identify the 10–25 most important, distinct, and teachable concepts it contains.
 
 Return ONLY a JSON array — no prose, no markdown fences — where each element has this shape:
@@ -37,23 +27,11 @@ Rules:
 
   const userPrompt = `Extract the key concepts from this source text (sourceId: ${sourceId}):\n\n${rawText}`
 
-  let text = ''
+  let text: string
   try {
-    const msg = await cachedMessages.create({
-      model: MODEL,
-      max_tokens: 4096,
-      system: [
-        {
-          type: 'text',
-          text: systemPrompt,
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
-      messages: [{ role: 'user', content: userPrompt }],
-    })
-    text = msg.content[0].type === 'text' ? msg.content[0].text : ''
+    text = await generate(systemPrompt, userPrompt)
   } catch (err) {
-    throw new Error(`extractConcepts: Anthropic API call failed: ${String(err)}`)
+    throw new Error(`extractConcepts: Gemini API call failed: ${String(err)}`)
   }
 
   let parsed: Array<{ label: string; citations: [] }>
@@ -61,15 +39,12 @@ Rules:
     parsed = JSON.parse(stripCodeFences(text))
   } catch (err) {
     throw new Error(
-      `extractConcepts: failed to parse JSON response from Claude. ` +
-        `Raw response: ${text.slice(0, 300)}. Parse error: ${String(err)}`,
+      `extractConcepts: failed to parse JSON response. Raw: ${text.slice(0, 300)}. Error: ${String(err)}`,
     )
   }
 
   if (!Array.isArray(parsed)) {
-    throw new Error(
-      `extractConcepts: expected a JSON array but got ${typeof parsed}`,
-    )
+    throw new Error(`extractConcepts: expected JSON array but got ${typeof parsed}`)
   }
 
   return parsed.map((item) => ({
