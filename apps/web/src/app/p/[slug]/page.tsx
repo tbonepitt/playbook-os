@@ -20,7 +20,8 @@ const MODULES = [
   { n: '09', title: 'Production Readiness', lessons: 4, time: '20 min' },
 ]
 
-export default function MicrositePage({ params }: { params: { slug: string } }) {
+export default async function MicrositePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
   const totalLessons = MODULES.reduce((n, m) => n + m.lessons, 0)
 
   return (
@@ -32,7 +33,7 @@ export default function MicrositePage({ params }: { params: { slug: string } }) 
             <span key={i} className="w-2.5 h-2.5 rounded-full bg-gray-700" />
           ))}
         </div>
-        <span className="font-mono">{params.slug}.playbookos.app</span>
+        <span className="font-mono">{slug}.playbookos.app</span>
         <span className="ml-auto text-gray-600">Learner-facing preview</span>
         <Link
           href={`/publish`}
