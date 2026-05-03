@@ -3,142 +3,211 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Textarea } from '@/components/ui/Textarea'
-import { Card } from '@/components/ui/Card'
-import type { OutputType } from '@playbook-os/core'
 
-const OUTPUT_OPTIONS: { value: OutputType; label: string; desc: string }[] = [
-  { value: 'private-course', label: 'Private Course', desc: 'Internal team training' },
-  { value: 'public-playbook', label: 'Public Playbook', desc: 'Share with your audience' },
-  { value: 'lead-magnet', label: 'Lead Magnet', desc: 'Gated content for lead gen' },
-  { value: 'workshop', label: 'Workshop', desc: 'Live facilitation materials' },
-  { value: 'consulting-artifact', label: 'Consulting Artifact', desc: 'Client deliverables' },
-  { value: 'newsletter', label: 'Newsletter', desc: 'Email series or digest' },
+const STAGE_LABELS = [
+  { key: 'ingest',    label: 'Reading source'       },
+  { key: 'extract',   label: 'Extracting concepts'  },
+  { key: 'cluster',   label: 'Clustering themes'    },
+  { key: 'framework', label: 'Building framework'   },
+  { key: 'outline',   label: 'Generating outline'   },
+  { key: 'lessons',   label: 'Writing lesson cards' },
 ]
 
-const TONE_OPTIONS = ['Practical', 'Energetic', 'Executive', 'Academic', 'Conversational']
+type StageStatus = 'waiting' | 'running' | 'done' | 'error'
+type Stages = Record<string, { status: StageStatus; error?: string }>
+
+function ProgressView({ stages, error }: { stages: Stages; error: string | null }) {
+  return (
+    <div className="max-w-xs mx-auto mt-6 space-y-3 text-left">
+      {STAGE_LABELS.map(({ key, label }) => {
+        const s = stages[key] ?? { status: 'waiting' }
+        return (
+          <div key={key} className="flex items-center gap-3">
+            <span className="w-5 text-center text-base shrink-0">
+              {s.status === 'done'    ? '✓' :
+               s.status === 'running' ? '⟳' :
+               s.status === 'error'   ? '✕' : '○'}
+            </span>
+            <span className={`text-sm ${
+              s.status === 'done'    ? 'text-gray-900 font-medium' :
+              s.status === 'running' ? 'text-blue-600 font-medium animate-pulse' :
+              s.status === 'error'   ? 'text-red-600' :
+              'text-gray-400'
+            }`}>
+              {label}
+            </span>
+          </div>
+        )
+      })}
+      {error && (
+        <div className="mt-4 rounded-lg bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function NewPlaybookPage() {
   const router = useRouter()
-  const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({
-    title: '',
-    audience: '',
-    goal: '',
-    tone: 'Practical',
-    outputTypes: ['private-course'] as OutputType[],
-  })
+  const [url, setUrl] = useState('')
+  const [title, setTitle] = useState('')
+  const [generating, setGenerating] = useState(false)
+  const [stages, setStages] = useState<Stages>({})
+  const [error, setError] = useState<string | null>(null)
 
-  function toggleOutput(v: OutputType) {
-    setForm((f) => ({
-      ...f,
-      outputTypes: f.outputTypes.includes(v) ? f.outputTypes.filter((x) => x !== v) : [...f.outputTypes, v],
-    }))
-  }
+  const isUrl = /^https?:\/\//i.test(url.trim())
+  const autoTitle = isUrl
+    ? url.trim().replace(/^https?:\/\/(www\.)?/i, '').split('/')[0]
+    : 'My Playbook'
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleGenerate(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.title.trim()) return
-    setSaving(true)
+    if (!url.trim()) return
+    setGenerating(true)
+    setError(null)
+    let pollInterval: ReturnType<typeof setInterval> | null = null
+
     try {
-      const res = await fetch('/api/playbooks', {
+      // 1. Create playbook with sensible defaults
+      const pbRes = await fetch('/api/playbooks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          title: title.trim() || autoTitle,
+          audience: 'Professionals and practitioners',
+          goal: 'Learn and apply the key concepts from this source',
+          tone: 'Practical',
+          outputTypes: ['public-playbook'],
+        }),
       })
-      if (res.ok) {
-        const pb = await res.json()
-        router.push(`/library/${pb.id}`)
-      }
-    } finally {
-      setSaving(false)
+      if (!pbRes.ok) throw new Error('Could not create playbook')
+      const playbook = await pbRes.json()
+
+      // 2. Create + attach source
+      const srcRes = await fetch('/api/sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: isUrl ? 'article' : 'markdown',
+          url: url.trim(),
+          name: title.trim() || autoTitle,
+          playbookId: playbook.id,
+        }),
+      })
+      if (!srcRes.ok) throw new Error('Could not add source')
+
+      // 3. Kick off pipeline (fire and forget — poll for status)
+      fetch('/api/pipeline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playbookId: playbook.id }),
+      })
+
+      // 4. Poll every 1.5s until done
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/pipeline?playbookId=${playbook.id}`)
+          if (!res.ok) return
+          const state = await res.json()
+          setStages(state.stages ?? {})
+
+          const allDone = STAGE_LABELS.every(({ key }) =>
+            ['done', 'error'].includes(state.stages?.[key]?.status)
+          )
+          if (!allDone) return
+
+          clearInterval(pollInterval!)
+          const errStage = STAGE_LABELS.find(({ key }) => state.stages?.[key]?.status === 'error')
+          if (errStage) {
+            setError(state.stages[errStage.key]?.error ?? 'Generation failed — check your source and try again')
+            setGenerating(false)
+          } else {
+            router.push(`/library/${playbook.id}`)
+          }
+        } catch {
+          // ignore transient poll errors
+        }
+      }, 1500)
+
+    } catch (err) {
+      if (pollInterval) clearInterval(pollInterval)
+      setError(err instanceof Error ? err.message : String(err))
+      setGenerating(false)
     }
   }
 
   return (
     <div>
-      <ScreenHeader title="Create New Playbook" subtitle="Define your playbook's purpose and audience" />
+      <ScreenHeader
+        title="New Playbook"
+        subtitle="Drop in a URL or paste text — we'll handle everything else"
+      />
 
-      <form onSubmit={handleSubmit} className="mx-8 max-w-2xl space-y-6 pb-12">
-        <Card className="p-6 space-y-5">
-          <Input
-            id="title"
-            label="Playbook title"
-            placeholder="e.g. Agentic AI Systems Playbook"
-            value={form.title}
-            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-            required
-          />
-          <Input
-            id="audience"
-            label="Target audience"
-            placeholder="e.g. Product managers & engineers"
-            value={form.audience}
-            onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value }))}
-          />
-          <Textarea
-            id="goal"
-            label="Learning goal"
-            placeholder="What should learners be able to do after completing this playbook?"
-            rows={3}
-            value={form.goal}
-            onChange={(e) => setForm((f) => ({ ...f, goal: e.target.value }))}
-          />
-        </Card>
+      <div className="mx-8 max-w-xl pb-12">
+        {!generating ? (
+          <form onSubmit={handleGenerate} className="space-y-4">
+            <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Source <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder={"https://example.com/article\n\n— or paste raw text, a transcript, notes, or markdown"}
+                  rows={5}
+                  required
+                  autoFocus
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm placeholder:text-gray-400 focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500 resize-none"
+                />
+              </div>
 
-        <Card className="p-6">
-          <p className="text-sm font-medium text-gray-700 mb-3">Tone</p>
-          <div className="flex flex-wrap gap-2">
-            {TONE_OPTIONS.map((t) => (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Title <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder={autoTitle}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm placeholder:text-gray-400 focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={!url.trim()}
+              className="w-full py-3.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Generate Playbook →
+            </button>
+
+            <p className="text-xs text-center text-gray-400">
+              Reads source · extracts concepts · builds framework · writes lessons · ~60 sec
+            </p>
+          </form>
+        ) : (
+          <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
+            <div className="w-12 h-12 rounded-full bg-gray-900 flex items-center justify-center mx-auto mb-5">
+              <span className="text-white text-xl animate-spin inline-block">⟳</span>
+            </div>
+            <h2 className="text-base font-semibold text-gray-900 mb-1">Building your playbook…</h2>
+            <p className="text-sm text-gray-400">Takes about 30–60 seconds</p>
+            <ProgressView stages={stages} error={error} />
+            {error && (
               <button
-                key={t}
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, tone: t }))}
-                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                  form.tone === t
-                    ? 'bg-gray-900 text-white border-gray-900'
-                    : 'bg-white text-gray-600 border-gray-300 hover:border-gray-500'
-                }`}
+                onClick={() => { setGenerating(false); setStages({}); setError(null) }}
+                className="mt-6 text-sm text-gray-500 underline hover:text-gray-900"
               >
-                {t}
+                ← Try again
               </button>
-            ))}
+            )}
           </div>
-        </Card>
-
-        <Card className="p-6">
-          <p className="text-sm font-medium text-gray-700 mb-3">Output types</p>
-          <div className="grid grid-cols-2 gap-3">
-            {OUTPUT_OPTIONS.map(({ value, label, desc }) => {
-              const active = form.outputTypes.includes(value)
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => toggleOutput(value)}
-                  className={`text-left px-4 py-3 rounded-lg border transition-colors ${
-                    active ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-400'
-                  }`}
-                >
-                  <p className={`text-sm font-medium ${active ? 'text-gray-900' : 'text-gray-700'}`}>{label}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
-                </button>
-              )
-            })}
-          </div>
-        </Card>
-
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={saving || !form.title.trim()}>
-            {saving ? 'Creating…' : 'Create Playbook →'}
-          </Button>
-          <Button type="button" variant="ghost" onClick={() => router.back()}>
-            Cancel
-          </Button>
-        </div>
-      </form>
+        )}
+      </div>
     </div>
   )
 }
