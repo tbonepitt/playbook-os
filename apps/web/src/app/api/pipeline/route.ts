@@ -3,6 +3,9 @@ import type { PipelineState, PipelineStage, StageStatus } from '@/lib/pipeline-s
 import { repo } from '@/lib/repo'
 import { prisma } from '@/lib/prisma'
 
+// Extend Vercel function timeout to 5 minutes for the full pipeline
+export const maxDuration = 300
+
 const STAGE_ORDER: PipelineStage[] = ['ingest', 'extract', 'cluster', 'framework', 'outline', 'lessons']
 
 function makeId(prefix: string) {

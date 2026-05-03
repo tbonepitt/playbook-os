@@ -97,14 +97,7 @@ export default function NewPlaybookPage() {
       })
       if (!srcRes.ok) throw new Error('Could not add source')
 
-      // 3. Kick off pipeline (fire and forget — poll for status)
-      fetch('/api/pipeline', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playbookId: playbook.id }),
-      })
-
-      // 4. Poll every 1.5s until done
+      // 3. Start polling for progress (pipeline can take 30-90s)
       pollInterval = setInterval(async () => {
         try {
           const res = await fetch(`/api/pipeline?playbookId=${playbook.id}`)
@@ -129,6 +122,19 @@ export default function NewPlaybookPage() {
           // ignore transient poll errors
         }
       }, 1500)
+
+      // 4. Kick off pipeline — awaited so errors surface; polling handles live updates
+      const runRes = await fetch('/api/pipeline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playbookId: playbook.id }),
+      })
+      clearInterval(pollInterval!)
+      const result = await runRes.json()
+      if (!runRes.ok) {
+        throw new Error(result.error ?? 'Pipeline failed')
+      }
+      router.push(`/library/${playbook.id}`)
 
     } catch (err) {
       if (pollInterval) clearInterval(pollInterval)
